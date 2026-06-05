@@ -11,7 +11,7 @@ const ELEMENT_TO_FREQ: Record<ElementType, number> = {
 
 let audioCtx: AudioContext | null = null;
 
-function getAudioContext(): AudioContext {
+export function getAudioContext(): AudioContext {
   if (!audioCtx) {
     audioCtx = new AudioContext();
   }
@@ -72,7 +72,8 @@ export function playSequence(
   queuedSlotIndices: number[],
   slots: (ElementType | null)[],
   bpm: number,
-  direction: WindDirection
+  direction: WindDirection,
+  t0: number
 ): void {
   const ctx = getAudioContext();
   console.log('[playSequence] ctx.state=', ctx.state, 'queued=', queuedSlotIndices.length, 'bpm=', bpm);
@@ -91,9 +92,8 @@ export function playSequence(
 
   const beatInterval = 60 / bpm;
   const noteDuration = beatInterval * 0.6;
-  const now = ctx.currentTime;
 
-  console.log('[playSequence] scheduling', N, 'notes, beatInterval=', beatInterval.toFixed(2), 's, now=', now.toFixed(2));
+  console.log('[playSequence] scheduling', N, 'notes, beatInterval=', beatInterval.toFixed(2), 's, t0=', t0.toFixed(2));
 
   sorted.forEach((slotIndex, i) => {
     const element = slots[slotIndex];
@@ -102,7 +102,7 @@ export function playSequence(
     const freq = ELEMENT_TO_FREQ[element];
     if (freq == null) return;
 
-    const startTime = now + i * beatInterval;
+    const startTime = t0 + i * beatInterval;
     const endTime = startTime + noteDuration;
 
     console.log('[playSequence] note', i, element, freq, 'Hz at t=', startTime.toFixed(2));
@@ -112,7 +112,7 @@ export function playSequence(
     osc.frequency.setValueAtTime(freq, startTime);
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0, now);
+    gain.gain.setValueAtTime(0, t0);
     gain.gain.linearRampToValueAtTime(0.4, startTime + 0.005);
     gain.gain.exponentialRampToValueAtTime(0.001, endTime);
 

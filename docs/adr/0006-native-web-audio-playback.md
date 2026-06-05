@@ -16,7 +16,7 @@ Replace Tone.js with native Web Audio API for all spring-back playback:
 
 1. **Instrument voice**: `OscillatorNode` (triangle wave) + `GainNode` with a pluck envelope — fast attack (5ms linear ramp to 0.4) and exponential decay to silence by note end. This approximates the plucked-string character of `PluckSynth` without the external dependency.
 
-2. **Scheduling**: Notes are scheduled at precise times using `AudioContext.currentTime + offset`. Each note gets `oscillator.start(startTime)` and `oscillator.stop(endTime)`. No transport, no worker timer — the browser's audio clock provides sample-accurate scheduling.
+2. **Scheduling**: The caller computes `t0` (`AudioContext.currentTime + 0.05` lookahead) and passes it to `playSequence()`. Notes are scheduled at `t0 + i × beatInterval`. Each note gets `oscillator.start(startTime)` and `oscillator.stop(endTime)`. No transport, no worker timer — the browser's audio clock provides sample-accurate scheduling.
 
 3. **Polyphony**: Each note creates its own oscillator + gain pair. Nodes self-clean via `oscillator.onended`. No voice pool needed — the browser handles concurrent oscillators efficiently.
 

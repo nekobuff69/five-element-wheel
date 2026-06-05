@@ -1,8 +1,8 @@
-import type { WheelState, WheelAction } from './types';
+import type { WheelState, WheelAction, ElementType } from './types';
 import Slot from './Slot';
 import Head from './Head';
 import { useEffect, useRef, useState } from 'react';
-import { playTack, playSequence, stopAudio } from './audio';
+import { playTack, playSequence, stopAudio, getAudioContext } from './audio';
 interface WheelProps {
   state: WheelState;
   dispatch: React.Dispatch<WheelAction>;
@@ -29,47 +29,31 @@ function Wheel({ state, dispatch }: WheelProps) {
     state.currentSlotAtHead !== null
       ? state.slots[state.currentSlotAtHead]
       : null;
+  // Playback order: encounter order (as stones passed the head)
+  const playbackIndices = state.queuedSlotIndices;
   const wheelRef = useRef<HTMLDivElement>(null!);
   const isDraggingRef = useRef(false);
   const lastAngleRef = useRef<number | null>(null);
   const prevModeRef = useRef(state.mode);
-  const springBackRef = useRef(false);
-  const hasPlayedRef = useRef(false);
   const dragStartedRef = useRef(false);
   const accumulatedMovementRef = useRef(0);
 
+  const playbackRef = useRef<PlaybackState | null>(null);
+interface PlaybackState {
+  t0: number;
+  beatInterval: number;
+  indices: number[];
+  slots: (ElementType | null)[];
+  count: number;
+  rafId: number | null;
+  started: boolean;
+  completed: boolean;
+}
+
+
   const [springBackPlayingIndex, setSpringBackPlayingIndex] = useState(-1);
 
-  // Reset playing index when not in springBack
-  useEffect(() => {
-    if (state.mode !== 'springBack') {
-      setSpringBackPlayingIndex(-1);
-    }
-  }, [state.mode]);
 
-  // Advance springBackPlayingIndex through queued slots at each beat
-  useEffect(() => {
-    if (state.mode !== 'springBack') return;
-
-    const count = state.queuedSlotIndices.length;
-    if (count === 0) return;
-
-    const beatInterval = 60 / state.bpm;
-
-    setSpringBackPlayingIndex(0);
-
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    for (let i = 1; i < count; i++) {
-      const timer = setTimeout(() => {
-        setSpringBackPlayingIndex(i);
-      }, i * beatInterval * 1000);
-      timers.push(timer);
-    }
-
-    return () => {
-      timers.forEach(clearTimeout);
-    };
-  }, [state.mode, state.queuedSlotIndices.length, state.bpm]);
 
 
   useEffect(() => {
@@ -85,31 +69,7 @@ function Wheel({ state, dispatch }: WheelProps) {
     prevModeRef.current = state.mode;
   }, [state.mode]);
 
-  useEffect(() => {
-    if (state.mode === 'springBack' && !springBackRef.current) {
-      springBackRef.current = true;
-    }
-    if (state.mode !== 'springBack') {
-      springBackRef.current = false;
-    }
-  }, [state.mode]);
 
-  useEffect(() => {
-    if (state.mode === 'springBack' && !hasPlayedRef.current) {
-      hasPlayedRef.current = true;
-      if (state.direction && state.queuedSlotIndices.length > 0) {
-        playSequence(
-          state.queuedSlotIndices,
-          state.slots,
-          state.bpm,
-          state.direction
-        );
-      }
-    }
-    if (state.mode !== 'springBack') {
-      hasPlayedRef.current = false;
-    }
-  }, [state.mode, state.queuedSlotIndices, state.slots, state.bpm, state.direction]);
 
 
   // Dispatch COMPLETE immediately when spring-back duration is 0
@@ -123,6 +83,98 @@ function Wheel({ state, dispatch }: WheelProps) {
       }
     }
   }, [state.mode, state.queuedSlotIndices.length, state.bpm, dispatch]);
+  // Advance springBackPlayingIndex via rAF synced to AudioContext clock
+  useEffect(() => {
+    if (state.mode !== 'springBack') return;
+
+    const ctx = getAudioContext();
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const count = state.queuedSlotIndices.length;
+    if (count === 0) {
+      dispatch({ type: 'COMPLETE' });
+      return;
+    }
+
+    if (!state.direction) {
+      dispatch({ type: 'COMPLETE' });
+      return;
+    }
+
+    const beatInterval = 60 / state.bpm;
+    const t0 = ctx.currentTime + 0.05; // 50ms lookahead
+
+    const indices = state.queuedSlotIndices;
+
+    playbackRef.current = {
+      t0,
+      beatInterval,
+      indices: indices,
+      slots: state.slots,
+      count,
+      rafId: null,
+      started: false,
+      completed: false,
+    };
+
+    // Schedule audio
+    playSequence(
+      state.queuedSlotIndices,
+      state.slots,
+      state.bpm,
+      state.direction,
+      t0
+    );
+
+    // Start rAF loop
+    const tick = () => {
+      const pb = playbackRef.current;
+      if (!pb || pb.completed) return;
+
+      const elapsed = ctx.currentTime - pb.t0;
+      const currentBeat = Math.floor(elapsed / pb.beatInterval);
+
+      // Check if playback has finished
+      const totalDuration = pb.count * pb.beatInterval;
+      if (elapsed >= totalDuration + pb.beatInterval * 0.5) {
+        pb.completed = true;
+        pb.rafId = null;
+        dispatch({ type: 'COMPLETE' });
+        return;
+      }
+
+      // Direct lookup: currentBeat is the index into indices
+      if (currentBeat >= 0 && currentBeat < pb.indices.length) {
+        const slotIdx = pb.indices[currentBeat];
+        if (pb.slots[slotIdx] !== null) {
+          setSpringBackPlayingIndex(currentBeat);
+        } else {
+          setSpringBackPlayingIndex(-1);
+        }
+      }
+
+      // Continue rAF loop
+      pb.rafId = requestAnimationFrame(tick);
+    };
+
+    playbackRef.current!.rafId = requestAnimationFrame(tick);
+
+    // Cleanup
+    return () => {
+      const pb = playbackRef.current;
+      if (pb && pb.rafId !== null) {
+        cancelAnimationFrame(pb.rafId);
+        pb.rafId = null;
+      }
+    };
+  }, [
+    state.mode,
+    state.queuedSlotIndices,
+    state.slots,
+    state.bpm,
+    state.direction,
+    dispatch,
+  ]);
 
 
   function getWheelStyle(): React.CSSProperties {
@@ -215,9 +267,9 @@ function Wheel({ state, dispatch }: WheelProps) {
           const slotAngle = i * 36;
           const effectiveRotation = state.mode === 'springBack' ? 0 : state.rotation;
           const counterRotation = -(effectiveRotation + slotAngle);
-          const springBackIndex = state.queuedSlotIndices.indexOf(i);
-          const isCurrentlyPlaying = springBackIndex >= 0 && springBackIndex === springBackPlayingIndex;
-          const isPlayed = springBackIndex >= 0 && springBackIndex < springBackPlayingIndex;
+          const sortedPos = playbackIndices.indexOf(i);
+          const isCurrentlyPlaying = sortedPos >= 0 && sortedPos === springBackPlayingIndex;
+          const isPlayed = sortedPos >= 0 && sortedPos < springBackPlayingIndex;
           return (
             <div
               key={i}
@@ -246,7 +298,7 @@ function Wheel({ state, dispatch }: WheelProps) {
         currentElement={headElement}
         springBackElement={
           state.mode === 'springBack' && springBackPlayingIndex >= 0
-            ? state.slots[state.queuedSlotIndices[springBackPlayingIndex]]
+            ? state.slots[playbackIndices[springBackPlayingIndex]]
             : null
         }
         isSpringBack={state.mode === 'springBack'}

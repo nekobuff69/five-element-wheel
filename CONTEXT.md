@@ -51,7 +51,7 @@ The five elements map to the C pentatonic scale (五音 / wǔ yīn). Together th
 |------|-----------|-----------------|
 | **Spring-back** | The automatic return of the wheel to its rest position (0°) after release; duration = `queuedSlotCount × (60 / BPM)` seconds | Unwinding, playback, return |
 | **Queued slots** | Slots that crossed the head during winding, stored in crossing order; determines which notes play and in what sequence | Triggered slots, crossing set |
-| **Play order** | The sorted order of queued slots during spring-back: ascending (CW wind = forward) or descending (CCW wind = reverse) | Melody order, sequence |
+  **Play order** | Encounter order: queued slots play in the exact order they crossed the head during winding | Melody order, sequence
 | **Beat grid** | The 10-beat timing framework: one beat per slot regardless of fill. Empty slots are rests — no note, but the beat position is preserved. | Timing grid, pulse |
 | **Tack sound** | A synthesized 30ms noise burst + 800Hz sine blip played when the wheel reaches ±360° | Click, stop sound, mechanical catch |
 | **Early release** | Releasing before reaching tack; plays only the slots that already crossed the head with a proportionally shorter spring-back | Partial wind, short phrase |
@@ -63,8 +63,7 @@ The five elements map to the C pentatonic scale (五音 / wǔ yīn). Together th
 - The **Head** is fixed at 6 o'clock (180°); the **Wheel** rotates behind it
 - **WINDING** queues **Slots** into `queuedSlotIndices` as they cross the **Head**
 - **SPRING_BACK** plays the **queued slots** in **play order** determined by wind direction
-- CW wind (positive rotation) → CCW spring-back → forward play order (ascending indices)
-- CCW wind (negative rotation) → CW spring-back → reverse play order (descending indices)
+
 - **BPM** controls the spring-back CSS transition duration and the interval between scheduled audio notes
 - Rotation is capped at ±360° (one full rotation); exceeding it triggers **TACK**
 
@@ -72,12 +71,12 @@ The five elements map to the C pentatonic scale (五音 / wǔ yīn). Together th
 
 > **Dev:** "If the user places stones in slots 0, 4, and 7 and winds CW, what plays?"
 >
-> **Domain expert:** "During winding, slots cross the head in order: 5, 4, 3, 2, 1, 0, 9, 8, 7, 6. If they wind a full rotation, `queuedSlotIndices` is `[5,4,3,2,1,0,9,8,7,6]`. During spring-back, the play order is ascending (CW wind = forward): `[0,1,2,3,4,5,6,7,8,9]`. Slots 0, 4, and 7 play their notes — the rest are rests."
->
-> **Dev:** "So the queued slot indices aren't the same as the play order?"
->
-> **Domain expert:** "Correct. `queuedSlotIndices` records crossing order during winding. `playSequence` re-sorts them based on direction: ascending for CW wind, descending for CCW. This way CW wind always gives a forward melody regardless of which slots are filled."
->
-> **Dev:** "What if they release early — only wound 108°?"
->
-> **Domain expert:** "Only 3 slots crossed the head: queued = `[5,4,3]`. Spring-back plays those 3 in ascending order: `[3,4,5]`. Duration is 3 beats × (60/BPM) seconds. The last ~7 beats of the grid are skipped entirely."
+  **Domain expert:** "During winding, slots cross the head in order: 5, 4, 3, 2, 1, 0, 9, 8, 7, 6. If they wind a full rotation, `queuedSlotIndices` is `[5,4,3,2,1,0,9,8,7,6]`. During spring-back, stones play in this exact encounter order — no sorting. Slots 0, 4, and 7 play their notes when their position in the queue is reached — the rest are rests."
+
+  **Dev:** "So the queued slot indices are the same as the play order?"
+
+  **Domain expert:** "Correct. Playback follows encounter order exactly. No sorting, no reordering. The first stone that crossed the head plays first, and so on."
+
+  **Dev:** "What if they release early — only wound 108°?"
+
+  **Domain expert:** "Only 3 slots crossed the head: queued = `[5,4,3]`. Spring-back plays those 3 in the same order: `[5,4,3]`. Duration is 3 beats × (60/BPM) seconds."
