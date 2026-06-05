@@ -35,7 +35,7 @@ export const ELEMENT_TO_NOTE: Record<ElementType, string> = {
 
 export const ELEMENT_COLORS: Record<ElementType, string> = {
   earth: '#8B6914',
-  metal: '#DAA520',
+  metal: '#A8B8C0',
   wood: '#4CAF50',
   fire: '#E53935',
   water: '#1E88E5',

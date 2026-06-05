@@ -176,14 +176,14 @@ describe('WIND', () => {
 // =========================================================== WIND queuing
 
 describe('WIND slot queuing', () => {
-  // Horseshoe arc: 10 slots across 300°, starting at 210°, 33.33° apart
-  // At rest (rotation=0): slot 0 is at the head (equidistant between 9 and 0, rounding picks 0)
+  // Horseshoe arc: 10 slots across 300°. At rest, slots 0 and 9 are 30° from head.
+  // Direction bias: CW → slot 9 wins tie, CCW → slot 0 wins tie.
 
   it('first CW wind from ready queues the destination slot', () => {
-    // delta=36 → rotation=36 → prevSlot=9 (floor), newSlot=8
+    // delta=36 → only slot 9 crosses 180° (slot 8 at 152° hasn't reached 180°)
     const s = cw(initialWheelState, 36);
-    expect(s.queuedSlotIndices).toEqual([9, 8]);
-    expect(s.currentSlotAtHead).toBe(8);
+    expect(s.queuedSlotIndices).toEqual([9]);
+    expect(s.currentSlotAtHead).toBe(9);
   });
 
   it('first CCW wind from ready queues the destination slot', () => {
@@ -194,14 +194,14 @@ describe('WIND slot queuing', () => {
   });
 
   it('queues intermediate and destination slots on subsequent CW winds', () => {
-    // Wind +36: rotation=36, prevSlot=9, newSlot=8 → pushes 9, tracks 9→8 → [9,8]
+    // Wind +36: only slot 9 crosses 180° → [9]
     const a = cw(initialWheelState, 36);
-    // Wind +36: rotation=72, prevSlot=8, newSlot=7 → tracks 8→7 → [9,8,7]
+    // Wind +36: slot 8 crosses 180° (at 188.67°) → [9,8]
     const b = cw(a, 36);
-    expect(b.queuedSlotIndices).toEqual([9, 8, 7]);
-    // Wind +36: rotation=108, prevSlot=7, newSlot=6 → tracks 7→6 → [9,8,7,6]
+    expect(b.queuedSlotIndices).toEqual([9, 8]);
+    // Wind +36: slot 7 crosses 180° → [9,8,7]
     const c = cw(b, 36);
-    expect(c.queuedSlotIndices).toEqual([9, 8, 7, 6]);
+    expect(c.queuedSlotIndices).toEqual([9, 8, 7]);
   });
 
   it('queues intermediate and destination slots on subsequent CCW winds', () => {
@@ -241,18 +241,17 @@ describe('WIND slot queuing', () => {
   });
 
   it('avoids duplicate slot entries when winding past already-queued slots', () => {
-    // Wind +36: rotation=36, wasReady → pushes prevSlot=9, tracks 9→8 → [9,8]
+    // Wind +36: only slot 9 crosses 180° → [9]
     const a = cw(initialWheelState, 36);
-    // Wind -10: rotation=26, prevSlot=8, newSlot=9, step=+1 (backtrack)
-    // Tracks 8→9, pushes 9 → already in queue, stays [9,8]
+    // Wind -10 → rotation=26, no new crossings → [9]
     const b = wheelReducer(a, { type: 'WIND', delta: -10 });
-    expect(b.queuedSlotIndices).toEqual([9, 8]);
+    expect(b.queuedSlotIndices).toEqual([9]);
   });
 
   it('does not queue anything new on zero delta from ready', () => {
-    // delta=0: rotation stays 0, head stays slot 0
+    // delta=0: no movement, no slot crosses 180°
     const s = wheelReducer(initialWheelState, { type: 'WIND', delta: 0 });
-    expect(s.queuedSlotIndices).toEqual([0]);
+    expect(s.queuedSlotIndices).toEqual([]);
   });
 });
 
