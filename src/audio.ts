@@ -83,11 +83,10 @@ export function playSequence(
     ctx.resume();
   }
 
-  const sorted = [...queuedSlotIndices].sort((a, b) =>
-    direction === 'cw' ? a - b : b - a
-  );
+  // Use encounter order (no sorting — queue order matches winding order)
+  const indices = queuedSlotIndices;
 
-  const N = sorted.length;
+  const N = indices.length;
   if (N === 0) return;
 
   const beatInterval = 60 / bpm;
@@ -95,7 +94,7 @@ export function playSequence(
 
   console.log('[playSequence] scheduling', N, 'notes, beatInterval=', beatInterval.toFixed(2), 's, t0=', t0.toFixed(2));
 
-  sorted.forEach((slotIndex, i) => {
+  indices.forEach((slotIndex, i) => {
     const element = slots[slotIndex];
     if (!element) return;
 
