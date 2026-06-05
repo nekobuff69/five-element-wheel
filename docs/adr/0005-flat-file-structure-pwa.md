@@ -23,7 +23,7 @@ src/
   App.tsx              — Root component, useReducer host
   types.ts             — ElementType, WheelState, WheelAction, constants
   wheelReducer.ts      — Pure reducer + initial state
-  wheelReducer.test.ts — 59 unit tests
+  wheelReducer.test.ts — 55 unit tests
   Wheel.tsx            — Pointer events, spring-back logic, slot rendering
   Slot.tsx             — Presentational: empty/filled/glow/dim
   Head.tsx             — Fixed marker at 6 o'clock

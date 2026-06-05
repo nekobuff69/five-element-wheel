@@ -36,7 +36,7 @@ The reducer is a pure function: `(state, action) → state`. Every action handle
 
 ## Consequences
 
-- **Positive**: 59 unit tests cover every state transition, every action in every valid state, edge cases (all empty, all filled, early release, CW vs CCW), and the full READY→COMPLETE→READY cycle. Tests are fast (~8ms total) and run on every change.
+- **Positive**: 55 unit tests cover every state transition, every action in every valid state, edge cases (all empty, all filled, early release, CW vs CCW), and the full READY→COMPLETE→READY cycle. Tests are fast (~8ms total) and run on every change.
 - **Positive**: Components never need to check "can I dispatch this?" — they dispatch and the reducer no-ops if invalid.
 - **Negative**: The WIND action handler is the most complex (~30 lines) because it manages rotation capping, direction detection, and slot queuing in one pass.
 - **Neutral**: The reducer is ~100 lines. Well within maintainable range for a single-concern module.

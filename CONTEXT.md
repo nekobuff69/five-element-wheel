@@ -15,7 +15,7 @@
 | Term | Definition | Note | Color |
 |------|-----------|------|-------|
 | **Earth** (土) | Brown stone, represents stability and soil | C4 (Gōng / Do) | `#8B6914` |
-| **Metal** (金) | Gold stone, represents structure and geometry | D4 (Shāng / Re) | `#DAA520` |
+| **Metal** (金) | Silver-grey stone, represents structure and geometry | D4 (Shāng / Re) | `#A8B8C0` |
 | **Wood** (木) | Green stone, represents growth and foliage | E4 (Jué / Mi) | `#4CAF50` |
 | **Fire** (火) | Red stone, represents energy and flame | G4 (Zhǐ / Sol) | `#E53935` |
 | **Water** (水) | Blue stone, represents flow and adaptability | A4 (Yǔ / La) | `#1E88E5` |
