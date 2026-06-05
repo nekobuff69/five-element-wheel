@@ -29,7 +29,7 @@ src/
   Head.tsx             — Fixed marker at 6 o'clock
   StonePalette.tsx     — 5 stones + Clear button
   BPMControl.tsx       — Range slider + "C Pentatonic" label
-  audio.ts             — tone.js wrapper + raw Web Audio tack
+  audio.ts             — native Web Audio API playback + tack
   index.css            — All styles with custom properties
 ```
 

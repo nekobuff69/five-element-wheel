@@ -65,7 +65,7 @@ The five elements map to the C pentatonic scale (五音 / wǔ yīn). Together th
 - **SPRING_BACK** plays the **queued slots** in **play order** determined by wind direction
 - CW wind (positive rotation) → CCW spring-back → forward play order (ascending indices)
 - CCW wind (negative rotation) → CW spring-back → reverse play order (descending indices)
-- **BPM** controls both spring-back CSS transition duration and audio Transport scheduling interval
+- **BPM** controls the spring-back CSS transition duration and the interval between scheduled audio notes
 - Rotation is capped at ±360° (one full rotation); exceeding it triggers **TACK**
 
 ## Example dialogue

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (implemented).
+Superseded by [ADR-0006](./0006-native-web-audio-playback.md).
 
 ## Context
 

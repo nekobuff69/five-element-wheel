@@ -1,23 +1,13 @@
-import * as Tone from 'tone';
-import { ELEMENT_TO_NOTE, type ElementType, type WindDirection } from './types';
+import { type ElementType, type WindDirection } from './types';
 
-const VOICE_POOL_SIZE = 10;
-let synthPool: Tone.PluckSynth[] | null = null;
-let poolIndex = 0;
-
-function getSynthPool(): Tone.PluckSynth[] {
-  if (!synthPool) {
-    synthPool = Array.from({ length: VOICE_POOL_SIZE }, () => {
-      return new Tone.PluckSynth({
-        attackNoise: 0.1,
-        dampening: 4000,
-        resonance: 0.7,
-      }).toDestination();
-    });
-    poolIndex = 0;
-  }
-  return synthPool;
-}
+// Map element types to frequencies in Hz (C pentatonic: C4 D4 E4 G4 A4)
+const ELEMENT_TO_FREQ: Record<ElementType, number> = {
+  earth: 261.63,  // C4
+  metal: 293.66,  // D4
+  wood:  329.63,  // E4
+  fire:  392.00,  // G4
+  water: 440.00,  // A4
+};
 
 let audioCtx: AudioContext | null = null;
 
@@ -28,22 +18,13 @@ function getAudioContext(): AudioContext {
   return audioCtx;
 }
 
-let toneStarted = false;
-
-function ensureToneStarted(): void {
-  if (!toneStarted) {
-    Tone.start();
-    toneStarted = true;
-  }
-}
-
 
 export function initAudio(): void {
   const ctx = getAudioContext();
   if (ctx.state === 'suspended') {
     ctx.resume();
   }
-  ensureToneStarted();
+  console.log('[initAudio] ctx.state=', ctx.state);
 }
 
 
@@ -93,11 +74,14 @@ export function playSequence(
   bpm: number,
   direction: WindDirection
 ): void {
-  ensureToneStarted();
-  const pool = getSynthPool();
-  poolIndex = 0;
+  const ctx = getAudioContext();
+  console.log('[playSequence] ctx.state=', ctx.state, 'queued=', queuedSlotIndices.length, 'bpm=', bpm);
 
-  // Sort based on direction: CW=forward(ascending), CCW=reverse(descending)
+  if (ctx.state === 'suspended') {
+    console.log('[playSequence] resuming suspended AudioContext');
+    ctx.resume();
+  }
+
   const sorted = [...queuedSlotIndices].sort((a, b) =>
     direction === 'cw' ? a - b : b - a
   );
@@ -105,40 +89,47 @@ export function playSequence(
   const N = sorted.length;
   if (N === 0) return;
 
-  const T = N * (60 / bpm);
+  const beatInterval = 60 / bpm;
+  const noteDuration = beatInterval * 0.6;
+  const now = ctx.currentTime;
 
-  // Cancel any previous scheduled events and reset
-  Tone.Transport.cancel();
-  Tone.Transport.position = 0;
+  console.log('[playSequence] scheduling', N, 'notes, beatInterval=', beatInterval.toFixed(2), 's, now=', now.toFixed(2));
 
   sorted.forEach((slotIndex, i) => {
     const element = slots[slotIndex];
-    if (element) {
-      const note = ELEMENT_TO_NOTE[element];
-      const time = i * (T / N);
-      Tone.Transport.schedule((triggerTime) => {
-        const voice = pool[poolIndex % VOICE_POOL_SIZE];
-        poolIndex++;
-        voice.triggerAttackRelease(note, '8n', triggerTime);
-      }, time);
-    }
-    // Empty slots: no note — just a rest at this beat position
+    if (!element) return;
+
+    const freq = ELEMENT_TO_FREQ[element];
+    if (freq == null) return;
+
+    const startTime = now + i * beatInterval;
+    const endTime = startTime + noteDuration;
+
+    console.log('[playSequence] note', i, element, freq, 'Hz at t=', startTime.toFixed(2));
+
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, startTime);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.4, startTime + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, endTime);
+
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(endTime);
+
+    osc.onended = () => {
+      osc.disconnect();
+      gain.disconnect();
+    };
   });
 
-  // Schedule transport stop at end
-  Tone.Transport.schedule(() => {
-    Tone.Transport.stop();
-  }, T);
-
-  // Start playback
-  Tone.Transport.start();
+  console.log('[playSequence] all notes scheduled');
 }
 
 export function stopAudio(): void {
-  if (synthPool) {
-    synthPool.forEach((s) => s.dispose());
-    synthPool = null;
-  }
-  Tone.Transport.cancel();
-  Tone.Transport.stop();
+  // Native Web Audio nodes are self-cleaning via onended handlers.
+  // No-op: kept for API compatibility with callers.
 }
