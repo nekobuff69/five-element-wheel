@@ -180,10 +180,10 @@ describe('WIND slot queuing', () => {
   // At rest (rotation=0): slot 0 is at the head (equidistant between 9 and 0, rounding picks 0)
 
   it('first CW wind from ready queues the destination slot', () => {
-    // delta=36 → rotation=36 → head slot = 9
+    // delta=36 → rotation=36 → prevSlot=9 (floor), newSlot=8
     const s = cw(initialWheelState, 36);
-    expect(s.queuedSlotIndices).toEqual([9]);
-    expect(s.currentSlotAtHead).toBe(9);
+    expect(s.queuedSlotIndices).toEqual([9, 8]);
+    expect(s.currentSlotAtHead).toBe(8);
   });
 
   it('first CCW wind from ready queues the destination slot', () => {
@@ -194,14 +194,14 @@ describe('WIND slot queuing', () => {
   });
 
   it('queues intermediate and destination slots on subsequent CW winds', () => {
-    // Wind +36: rotation=36, head=9 → queue [9]
+    // Wind +36: rotation=36, prevSlot=9, newSlot=8 → pushes 9, tracks 9→8 → [9,8]
     const a = cw(initialWheelState, 36);
-    // Wind +36: rotation=72, head=8 → track 9→8 → queue [9,8]
+    // Wind +36: rotation=72, prevSlot=8, newSlot=7 → tracks 8→7 → [9,8,7]
     const b = cw(a, 36);
-    expect(b.queuedSlotIndices).toEqual([9, 8]);
-    // Wind +36: rotation=108, head=7 → track 8→7 → queue [9,8,7]
+    expect(b.queuedSlotIndices).toEqual([9, 8, 7]);
+    // Wind +36: rotation=108, prevSlot=7, newSlot=6 → tracks 7→6 → [9,8,7,6]
     const c = cw(b, 36);
-    expect(c.queuedSlotIndices).toEqual([9, 8, 7]);
+    expect(c.queuedSlotIndices).toEqual([9, 8, 7, 6]);
   });
 
   it('queues intermediate and destination slots on subsequent CCW winds', () => {
@@ -241,11 +241,12 @@ describe('WIND slot queuing', () => {
   });
 
   it('avoids duplicate slot entries when winding past already-queued slots', () => {
-    // Wind +36 to queue slot 9, then wind -10 to barely move back
-    const a = cw(initialWheelState, 36); // rotation=36, head=9, queue=[9]
-    // Wind -10: rotation=26, head=9 (no change)
+    // Wind +36: rotation=36, wasReady → pushes prevSlot=9, tracks 9→8 → [9,8]
+    const a = cw(initialWheelState, 36);
+    // Wind -10: rotation=26, prevSlot=8, newSlot=9, step=+1 (backtrack)
+    // Tracks 8→9, pushes 9 → already in queue, stays [9,8]
     const b = wheelReducer(a, { type: 'WIND', delta: -10 });
-    expect(b.queuedSlotIndices).toEqual([9]); // no duplicates
+    expect(b.queuedSlotIndices).toEqual([9, 8]);
   });
 
   it('does not queue anything new on zero delta from ready', () => {

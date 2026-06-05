@@ -11,14 +11,19 @@ export const initialWheelState: WheelState = {
   bpm: 100,
 };
 
-function getSlotAtHead(rotation: number): number {
+function getSlotAtHead(rotation: number, direction?: WindDirection | null): number {
   // Horseshoe arc: 10 slots across 300°, starting at 210°, 33.33° apart
   // Gap of 60° centered at 180° (head position)
-  // Solve: 210 + i * (300/9) + rotation ≈ 180 → i ≈ (-30 - rotation) * 9/300
   const SLOT_ANGLE_SPAN = 300 / 9;
   const x = (-30 - rotation) % 360;
   const normalized = (x + 360) % 360;
-  return Math.round(normalized / SLOT_ANGLE_SPAN) % 10;
+  const raw = normalized / SLOT_ANGLE_SPAN;
+  // Bias toward the slot approaching from the correct side of the gap:
+  // CW → slot 9 (right of head) approaches first → floor
+  // CCW → slot 0 (left of head) approaches first → round
+  const slotIndex = direction === 'cw' ? Math.floor(raw) : Math.round(raw);
+  return ((slotIndex % 10) + 10) % 10;
+
 }
 
 export function wheelReducer(state: WheelState, action: WheelAction): WheelState {
@@ -46,7 +51,6 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
       if (state.mode !== 'ready' && state.mode !== 'winding') return state;
 
       const wasReady = state.mode === 'ready';
-      const prevSlot = wasReady ? null : getSlotAtHead(state.rotation);
 
       // Determine direction from first meaningful delta
       let direction: WindDirection | null = state.direction;
@@ -54,25 +58,29 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
         direction = action.delta > 0 ? 'cw' : 'ccw';
       }
 
+      // Compute prevSlot and newSlot with direction bias:
+      // CW → floor favours slot 9 (right of head, approaches first)
+      // CCW → round favours slot 0 (left of head, approaches first)
+      const prevSlot = getSlotAtHead(state.rotation, direction);
+
       // Accumulate rotation, cap at ±360
       let newRotation = state.rotation + action.delta;
       if (newRotation > 360) newRotation = 360;
       if (newRotation < -360) newRotation = -360;
 
-      const newSlot = getSlotAtHead(newRotation);
+      const newSlot = getSlotAtHead(newRotation, direction);
       const queued = [...state.queuedSlotIndices];
 
       // Track new slots crossing the head
       if (wasReady) {
-        // First wind — the starting slot was already at the head, count it
-        if (!queued.includes(newSlot)) {
-          queued.push(newSlot);
+        // First wind — push the starting slot (it crosses the head during this wind)
+        if (!queued.includes(prevSlot)) {
+          queued.push(prevSlot);
         }
-      } else if (prevSlot !== null) {
-        // Track any slots that crossed the head
-        // When rotating CW (positive delta), slots pass 12→11→10... (decreasing index)
-        // When rotating CCW (negative delta), slots pass 0→1→2... (increasing index)
-        const step = direction === 'cw' ? -1 : 1;
+      }
+      if (prevSlot !== newSlot) {
+        // Track any slots between prev and new
+        const step = newRotation > state.rotation ? -1 : 1;
         let cursor = prevSlot;
         while (cursor !== newSlot) {
           cursor = (cursor + step + 10) % 10;
@@ -80,10 +88,9 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
             queued.push(cursor);
           }
         }
-        // Include the final slot if not already queued
-        if (!queued.includes(newSlot)) {
-          queued.push(newSlot);
-        }
+      }
+      if (!queued.includes(newSlot)) {
+        queued.push(newSlot);
       }
 
       return {
