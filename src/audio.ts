@@ -1,6 +1,24 @@
 import * as Tone from 'tone';
 import { ELEMENT_TO_NOTE, type ElementType, type WindDirection } from './types';
 
+const VOICE_POOL_SIZE = 10;
+let synthPool: Tone.PluckSynth[] | null = null;
+let poolIndex = 0;
+
+function getSynthPool(): Tone.PluckSynth[] {
+  if (!synthPool) {
+    synthPool = Array.from({ length: VOICE_POOL_SIZE }, () => {
+      return new Tone.PluckSynth({
+        attackNoise: 0.1,
+        dampening: 4000,
+        resonance: 0.7,
+      }).toDestination();
+    });
+    poolIndex = 0;
+  }
+  return synthPool;
+}
+
 let audioCtx: AudioContext | null = null;
 
 function getAudioContext(): AudioContext {
@@ -10,7 +28,6 @@ function getAudioContext(): AudioContext {
   return audioCtx;
 }
 
-let pluckSynth: Tone.PluckSynth | null = null;
 let toneStarted = false;
 
 function ensureToneStarted(): void {
@@ -18,17 +35,6 @@ function ensureToneStarted(): void {
     Tone.start();
     toneStarted = true;
   }
-}
-
-function getSynth(): Tone.PluckSynth {
-  if (!pluckSynth) {
-    pluckSynth = new Tone.PluckSynth({
-      attackNoise: 0.1,
-      dampening: 4000,
-      resonance: 0.7,
-    }).toDestination();
-  }
-  return pluckSynth;
 }
 
 
@@ -88,7 +94,8 @@ export function playSequence(
   direction: WindDirection
 ): void {
   ensureToneStarted();
-  const synth = getSynth();
+  const pool = getSynthPool();
+  poolIndex = 0;
 
   // Sort based on direction: CW=forward(ascending), CCW=reverse(descending)
   const sorted = [...queuedSlotIndices].sort((a, b) =>
@@ -110,7 +117,9 @@ export function playSequence(
       const note = ELEMENT_TO_NOTE[element];
       const time = i * (T / N);
       Tone.Transport.schedule((triggerTime) => {
-        synth.triggerAttackRelease(note, '8n', triggerTime);
+        const voice = pool[poolIndex % VOICE_POOL_SIZE];
+        poolIndex++;
+        voice.triggerAttackRelease(note, '8n', triggerTime);
       }, time);
     }
     // Empty slots: no note — just a rest at this beat position
@@ -126,6 +135,10 @@ export function playSequence(
 }
 
 export function stopAudio(): void {
+  if (synthPool) {
+    synthPool.forEach((s) => s.dispose());
+    synthPool = null;
+  }
   Tone.Transport.cancel();
   Tone.Transport.stop();
 }

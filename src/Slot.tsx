@@ -1,5 +1,5 @@
 import type { ElementType, WheelMode } from './types';
-import { ELEMENT_COLORS } from './types';
+import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
 
 interface SlotProps {
   element: ElementType | null;
@@ -30,7 +30,7 @@ function Slot({ element, isAtHead, counterRotation, onClick, mode, isPlayed, isC
         transform: `rotate(${counterRotation}deg)`,
       }}
     >
-      {element && element[0].toUpperCase()}
+      {element && ELEMENT_SYMBOLS[element]}
     </div>
   );
 }

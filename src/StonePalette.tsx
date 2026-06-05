@@ -1,5 +1,5 @@
 import type { ElementType } from './types';
-import { ELEMENT_COLORS } from './types';
+import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
 
 const ELEMENTS: ElementType[] = ['earth', 'metal', 'wood', 'fire', 'water'];
 
@@ -22,7 +22,7 @@ function StonePalette({ selectedStone, onSelectStone, onClear }: StonePalettePro
           style={{ backgroundColor: ELEMENT_COLORS[el] }}
           onClick={() => onSelectStone(el)}
         >
-          {el[0].toUpperCase()}
+          {ELEMENT_SYMBOLS[el]}
         </div>
       ))}
       <button className="stone-palette__clear" onClick={onClear}>

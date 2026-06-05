@@ -180,7 +180,7 @@ function Wheel({ state, dispatch }: WheelProps) {
   }
   return (
     <div
-      className="wheel-container"
+      className={`wheel-container${state.mode === 'tack' ? ' wheel-container--tack' : ''}`}
       ref={wheelRef}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

@@ -50,6 +50,17 @@ body {
   cursor: grabbing;
 }
 
+.wheel-container--tack {
+  animation: tack-bounce 0.3s ease-out;
+}
+
+@keyframes tack-bounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+
 .wheel {
   width: 100%;
   height: 100%;
@@ -78,9 +89,13 @@ body {
   background: transparent;
 }
 
+
 .slot--filled {
   border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  background-image: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.4), transparent 60%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+  color: rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
 }
 
 .slot--at-head {
@@ -112,6 +127,7 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
+
 .head__stone {
   width: 20px;
   height: 20px;
@@ -121,7 +137,9 @@ body {
   justify-content: center;
   font-size: 11px;
   font-weight: bold;
-  color: white;
+  background-image: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.4), transparent 60%);
+  color: rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
 }
 
 .stone-palette {
@@ -133,6 +151,7 @@ body {
   flex-wrap: wrap;
 }
 
+
 .stone-palette__stone {
   width: 44px;
   height: 44px;
@@ -142,10 +161,12 @@ body {
   justify-content: center;
   font-size: 18px;
   font-weight: bold;
-  color: white;
+  color: rgba(0, 0, 0, 0.7);
   cursor: pointer;
   user-select: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  background-image: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.4), transparent 60%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
   transition: box-shadow 0.15s;
   border: 3px solid transparent;
 }

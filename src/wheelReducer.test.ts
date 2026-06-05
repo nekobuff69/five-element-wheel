@@ -171,10 +171,6 @@ describe('WIND', () => {
     expect(wheelReducer(springing, { type: 'WIND', delta: 36 })).toBe(springing);
   });
 
-  it('ignores WIND in complete mode', () => {
-    const completed = createState({ mode: 'complete' });
-    expect(wheelReducer(completed, { type: 'WIND', delta: 36 })).toBe(completed);
-  });
 });
 
 // =========================================================== WIND queuing
@@ -283,7 +279,7 @@ describe('RELEASE', () => {
     expect(s.queuedSlotIndices).toEqual(queue);
   });
 
-  it.each(['ready', 'springBack', 'complete'] as const)(
+  it.each(['ready', 'springBack'] as const)(
     'is no-op in %s mode',
     (mode) => {
       const state = createState({ mode });
@@ -305,7 +301,7 @@ describe('TACK', () => {
     expect(s.currentSlotAtHead).toBeNull();
   });
 
-  it.each(['ready', 'tack', 'springBack', 'complete'] as const)(
+  it.each(['ready', 'tack', 'springBack'] as const)(
     'is no-op in %s mode',
     (mode) => {
       const state = createState({ mode, direction: 'cw' });
@@ -344,7 +340,7 @@ describe('COMPLETE', () => {
     expect(s.bpm).toBe(100);
   });
 
-  it.each(['ready', 'winding', 'tack', 'complete'] as const)(
+  it.each(['ready', 'winding', 'tack'] as const)(
     'is no-op in %s mode',
     (mode) => {
       const state = createState({ mode, direction: mode === 'winding' ? 'cw' : null });

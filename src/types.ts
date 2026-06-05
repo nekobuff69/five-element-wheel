@@ -1,6 +1,6 @@
 export type ElementType = 'earth' | 'metal' | 'wood' | 'fire' | 'water';
 
-export type WheelMode = 'ready' | 'winding' | 'tack' | 'springBack' | 'complete';
+export type WheelMode = 'ready' | 'winding' | 'tack' | 'springBack';
 
 export type WindDirection = 'cw' | 'ccw';
 
@@ -40,3 +40,11 @@ export const ELEMENT_COLORS: Record<ElementType, string> = {
   fire: '#E53935',
   water: '#1E88E5',
 };
+export const ELEMENT_SYMBOLS: Record<ElementType, string> = {
+  earth: '土',
+  metal: '金',
+  wood: '木',
+  fire: '火',
+  water: '水',
+};
+

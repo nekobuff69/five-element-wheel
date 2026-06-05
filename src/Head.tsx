@@ -1,5 +1,5 @@
 import type { ElementType } from './types';
-import { ELEMENT_COLORS } from './types';
+import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
 
 interface HeadProps {
   currentElement: ElementType | null;
@@ -17,7 +17,7 @@ function Head({ currentElement, springBackElement, isSpringBack }: HeadProps) {
           className="head__stone"
           style={{ backgroundColor: ELEMENT_COLORS[displayElement] }}
         >
-          {displayElement[0].toUpperCase()}
+          {ELEMENT_SYMBOLS[displayElement]}
         </div>
       )}
     </div>
