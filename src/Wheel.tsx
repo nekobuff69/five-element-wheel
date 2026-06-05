@@ -13,6 +13,7 @@ const SLOT_TOP = 10;
 const SLOT_SIZE = 36;
 const WHEEL_RADIUS = 150;
 const ORIGIN_DISTANCE = WHEEL_RADIUS - (SLOT_TOP + SLOT_SIZE / 2);
+const DRAG_THRESHOLD = 5;
 function getAngle(centerX: number, centerY: number, px: number, py: number): number {
   return Math.atan2(py - centerY, px - centerX) * (180 / Math.PI);
 }
@@ -34,6 +35,8 @@ function Wheel({ state, dispatch }: WheelProps) {
   const prevModeRef = useRef(state.mode);
   const springBackRef = useRef(false);
   const hasPlayedRef = useRef(false);
+  const dragStartedRef = useRef(false);
+  const accumulatedMovementRef = useRef(0);
 
   const [springBackPlayingIndex, setSpringBackPlayingIndex] = useState(-1);
 
@@ -134,11 +137,12 @@ function Wheel({ state, dispatch }: WheelProps) {
     return { transform: `rotate(${state.rotation}deg)` };
   }
 
-  function handleTransitionEnd() {
-    if (state.mode === 'springBack') {
-      stopAudio();
-      dispatch({ type: 'COMPLETE' });
-    }
+  function handleTransitionEnd(e: React.TransitionEvent<HTMLDivElement>) {
+    if (state.mode !== 'springBack') return;
+    if (e.propertyName !== 'transform') return;
+    if (e.target !== e.currentTarget) return;
+    stopAudio();
+    dispatch({ type: 'COMPLETE' });
   }
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     const container = wheelRef.current;
@@ -150,10 +154,13 @@ function Wheel({ state, dispatch }: WheelProps) {
     const cy = rect.top + rect.height / 2;
     lastAngleRef.current = getAngle(cx, cy, e.clientX, e.clientY);
     isDraggingRef.current = true;
+    dragStartedRef.current = false;
+    accumulatedMovementRef.current = 0;
   }
 
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
     if (!isDraggingRef.current || lastAngleRef.current === null) return;
+    if (state.mode !== 'ready' && state.mode !== 'winding') return;
     const container = wheelRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
@@ -163,6 +170,14 @@ function Wheel({ state, dispatch }: WheelProps) {
     const rawDelta = currentAngle - lastAngleRef.current;
     const delta = normalizeDelta(rawDelta);
     lastAngleRef.current = currentAngle;
+    if (!dragStartedRef.current) {
+      accumulatedMovementRef.current += Math.abs(delta);
+      if (accumulatedMovementRef.current >= DRAG_THRESHOLD) {
+        dragStartedRef.current = true;
+      } else {
+        return;
+      }
+    }
     if (delta !== 0) {
       dispatch({ type: 'WIND', delta });
     }
@@ -174,9 +189,14 @@ function Wheel({ state, dispatch }: WheelProps) {
     if (container) {
       container.releasePointerCapture(e.pointerId);
     }
+    const wasDragStarted = dragStartedRef.current;
     isDraggingRef.current = false;
     lastAngleRef.current = null;
-    dispatch({ type: 'RELEASE' });
+    dragStartedRef.current = false;
+    accumulatedMovementRef.current = 0;
+    if (wasDragStarted) {
+      dispatch({ type: 'RELEASE' });
+    }
   }
   return (
     <div
