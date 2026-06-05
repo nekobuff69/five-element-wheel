@@ -12,7 +12,9 @@ const SLOT_COUNT = 10;
 const SLOT_TOP = 10;
 const SLOT_SIZE = 36;
 const WHEEL_RADIUS = 150;
+const SLOT_ANGLE_SPAN = 300 / 9; // ~33.33° for 10 slots across 300° arc
 const ORIGIN_DISTANCE = WHEEL_RADIUS - (SLOT_TOP + SLOT_SIZE / 2);
+const SLOT_START_ANGLE = 210; // Arc starts left of bottom gap, wraps through top
 const DRAG_THRESHOLD = 5;
 function getAngle(centerX: number, centerY: number, px: number, py: number): number {
   return Math.atan2(py - centerY, px - centerX) * (180 / Math.PI);
@@ -264,7 +266,7 @@ interface PlaybackState {
         onTransitionEnd={handleTransitionEnd}
       >
         {Array.from({ length: SLOT_COUNT }, (_, i) => {
-          const slotAngle = i * 36;
+          const slotAngle = SLOT_START_ANGLE + i * SLOT_ANGLE_SPAN;
           const effectiveRotation = state.mode === 'springBack' ? 0 : state.rotation;
           const counterRotation = -(effectiveRotation + slotAngle);
           const sortedPos = playbackIndices.indexOf(i);
@@ -282,6 +284,7 @@ interface PlaybackState {
               }}
             >
               <Slot
+                index={i}
                 element={state.slots[i]}
                 isAtHead={state.currentSlotAtHead === i}
                 counterRotation={counterRotation}

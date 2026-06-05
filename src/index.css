@@ -98,6 +98,16 @@ body {
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
 }
 
+.slot__index {
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: var(--slot-ring);
+  opacity: 0.6;
+}
+
 .slot--at-head {
   box-shadow: 0 0 12px 4px rgba(255, 255, 255, 0.4);
 }

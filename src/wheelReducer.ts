@@ -12,8 +12,13 @@ export const initialWheelState: WheelState = {
 };
 
 function getSlotAtHead(rotation: number): number {
-  const normalized = ((180 - rotation) % 360 + 360) % 360;
-  return Math.round(normalized / 36) % 10;
+  // Horseshoe arc: 10 slots across 300°, starting at 210°, 33.33° apart
+  // Gap of 60° centered at 180° (head position)
+  // Solve: 210 + i * (300/9) + rotation ≈ 180 → i ≈ (-30 - rotation) * 9/300
+  const SLOT_ANGLE_SPAN = 300 / 9;
+  const x = (-30 - rotation) % 360;
+  const normalized = (x + 360) % 360;
+  return Math.round(normalized / SLOT_ANGLE_SPAN) % 10;
 }
 
 export function wheelReducer(state: WheelState, action: WheelAction): WheelState {

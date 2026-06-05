@@ -2,6 +2,7 @@ import type { ElementType, WheelMode } from './types';
 import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
 
 interface SlotProps {
+  index: number;
   element: ElementType | null;
   isAtHead: boolean;
   counterRotation: number;
@@ -11,7 +12,7 @@ interface SlotProps {
   isCurrentlyPlaying: boolean;
 }
 
-function Slot({ element, isAtHead, counterRotation, onClick, mode, isPlayed, isCurrentlyPlaying }: SlotProps) {
+function Slot({ index, element, isAtHead, counterRotation, onClick, mode, isPlayed, isCurrentlyPlaying }: SlotProps) {
   const className = [
     'slot',
     element ? 'slot--filled' : 'slot--empty',
@@ -31,6 +32,7 @@ function Slot({ element, isAtHead, counterRotation, onClick, mode, isPlayed, isC
       }}
     >
       {element && ELEMENT_SYMBOLS[element]}
+      <span className="slot__index">{index}</span>
     </div>
   );
 }

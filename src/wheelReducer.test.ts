@@ -176,41 +176,40 @@ describe('WIND', () => {
 // =========================================================== WIND queuing
 
 describe('WIND slot queuing', () => {
-  // At rest (rotation=0): slot 5 is at the head.
-  //   head position = ((180 - 0) % 360 + 360) % 360 = 180 → 180 / 36 = 5
+  // Horseshoe arc: 10 slots across 300°, starting at 210°, 33.33° apart
+  // At rest (rotation=0): slot 0 is at the head (equidistant between 9 and 0, rounding picks 0)
 
   it('first CW wind from ready queues the destination slot', () => {
-    // delta=36 → rotation=36 → head slot = ((180-36)%360+360)%360/36 = 144/36 = 4
+    // delta=36 → rotation=36 → head slot = 9
     const s = cw(initialWheelState, 36);
-    expect(s.queuedSlotIndices).toEqual([4]);
-    expect(s.currentSlotAtHead).toBe(4);
+    expect(s.queuedSlotIndices).toEqual([9]);
+    expect(s.currentSlotAtHead).toBe(9);
   });
 
   it('first CCW wind from ready queues the destination slot', () => {
-    // delta=-36 → rotation=-36 → head slot = ((180+36)%360+360)%360/36 = 216/36 = 6
+    // delta=-36 → rotation=-36 → head slot = 0
     const s = ccw(initialWheelState, 36);
-    expect(s.queuedSlotIndices).toEqual([6]);
-    expect(s.currentSlotAtHead).toBe(6);
+    expect(s.queuedSlotIndices).toEqual([0]);
+    expect(s.currentSlotAtHead).toBe(0);
   });
 
   it('queues intermediate and destination slots on subsequent CW winds', () => {
-    // Start: rotation=0, head=5
-    // Wind +36: rotation=36, head=4  → queue [4]
+    // Wind +36: rotation=36, head=9 → queue [9]
     const a = cw(initialWheelState, 36);
-    // Wind +36: rotation=72, head=3  → track 4→3 → queue [4,3]
+    // Wind +36: rotation=72, head=8 → track 9→8 → queue [9,8]
     const b = cw(a, 36);
-    expect(b.queuedSlotIndices).toEqual([4, 3]);
-    // Wind +36: rotation=108, head=2 → track 3→2 → queue [4,3,2]
+    expect(b.queuedSlotIndices).toEqual([9, 8]);
+    // Wind +36: rotation=108, head=7 → track 8→7 → queue [9,8,7]
     const c = cw(b, 36);
-    expect(c.queuedSlotIndices).toEqual([4, 3, 2]);
+    expect(c.queuedSlotIndices).toEqual([9, 8, 7]);
   });
 
   it('queues intermediate and destination slots on subsequent CCW winds', () => {
-    const a = ccw(initialWheelState, 36); // rotation=-36, head=6 → queue [6]
-    const b = ccw(a, 36); // rotation=-72, head=7 → track 6→7 → queue [6,7]
-    expect(b.queuedSlotIndices).toEqual([6, 7]);
-    const c = ccw(b, 36); // rotation=-108, head=8 → track 7→8 → queue [6,7,8]
-    expect(c.queuedSlotIndices).toEqual([6, 7, 8]);
+    const a = ccw(initialWheelState, 36); // rotation=-36, head=0 → queue [0]
+    const b = ccw(a, 36); // rotation=-72, head=1 → track 0→1 → queue [0,1]
+    expect(b.queuedSlotIndices).toEqual([0, 1]);
+    const c = ccw(b, 36); // rotation=-108, head=2 → track 1→2 → queue [0,1,2]
+    expect(c.queuedSlotIndices).toEqual([0, 1, 2]);
   });
 
   it('produces 10 unique slots over a full CW rotation (10 × 36°)', () => {
@@ -221,10 +220,10 @@ describe('WIND slot queuing', () => {
     expect(s.rotation).toBe(360);
     expect(s.queuedSlotIndices).toHaveLength(10);
     expect(new Set(s.queuedSlotIndices).size).toBe(10);
-    // Order: starting from slot 5 at rest, CW moves head backwards:
-    // 5→4 → 4→3 → 3→2 → 2→1 → 1→0 → 0→9 → 9→8 → 8→7 → 7→6 → 6→5
-    // queued: [4,3,2,1,0,9,8,7,6,5]
-    expect(s.queuedSlotIndices).toEqual([4, 3, 2, 1, 0, 9, 8, 7, 6, 5]);
+    // CW: head moves backwards 0→9→8→7→6→5→4→3→2→1→0
+    // (36° step > 33.33° spacing causes intermediate tracking at 180°→216°)
+    // queued: [9,8,7,6,5,4,3,2,1,0]
+    expect(s.queuedSlotIndices).toEqual([9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
   });
 
   it('produces 10 unique slots over a full CCW rotation (10 × 36°)', () => {
@@ -235,25 +234,24 @@ describe('WIND slot queuing', () => {
     expect(s.rotation).toBe(-360);
     expect(s.queuedSlotIndices).toHaveLength(10);
     expect(new Set(s.queuedSlotIndices).size).toBe(10);
-    // CCW: head moves forward 5→6→7→8→9→0→1→2→3→4→5
-    // queued: [6,7,8,9,0,1,2,3,4,5]
-    expect(s.queuedSlotIndices).toEqual([6, 7, 8, 9, 0, 1, 2, 3, 4, 5]);
+    // CCW: head moves forward 0→1→2→3→4→5→6→7→8→9→0
+    // (36° step > 33.33° spacing causes intermediate tracking at -144°→-180°)
+    // queued: [0,1,2,3,4,5,6,7,8,9]
+    expect(s.queuedSlotIndices).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
   it('avoids duplicate slot entries when winding past already-queued slots', () => {
-    // Wind +36 to queue slot 4, then wind -10 to barely move back
-    const a = cw(initialWheelState, 36); // rotation=36, head=4, queue=[4]
-    // Wind -10: rotation=26, head = ((180-26)%360+360)%360/36 = 154/36 ≈ 4.28 → round=4
-    // Head is still slot 4, no new slots cross
+    // Wind +36 to queue slot 9, then wind -10 to barely move back
+    const a = cw(initialWheelState, 36); // rotation=36, head=9, queue=[9]
+    // Wind -10: rotation=26, head=9 (no change)
     const b = wheelReducer(a, { type: 'WIND', delta: -10 });
-    expect(b.queuedSlotIndices).toEqual([4]); // no duplicates
+    expect(b.queuedSlotIndices).toEqual([9]); // no duplicates
   });
 
   it('does not queue anything new on zero delta from ready', () => {
-    // delta=0: rotation stays 0, head stays slot 5
-    // wasReady=true, newSlot=5 → queue.push(5) since 5 not already queued
+    // delta=0: rotation stays 0, head stays slot 0
     const s = wheelReducer(initialWheelState, { type: 'WIND', delta: 0 });
-    expect(s.queuedSlotIndices).toEqual([5]);
+    expect(s.queuedSlotIndices).toEqual([0]);
   });
 });
 
