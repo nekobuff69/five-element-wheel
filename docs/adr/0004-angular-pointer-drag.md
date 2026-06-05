@@ -27,6 +27,9 @@ Key implementation details:
 
 Pointer events are gated by mode: only `ready` and `winding` accept pointer input. During `springBack`, `tack`, and `complete`, `handlePointerDown` returns early.
 
+The pointer-drag logic was later extracted into a dedicated `useWheelGesture` custom hook (`src/useWheelGesture.ts`). The hook uses native `addEventListener` (not React synthetic events) with ref-stored callbacks to avoid stale closures. The component calls `useWheelGesture(wheelRef, mode, onWind, onRelease)` and receives clean delta/release notifications — all pointer capture, angle math, and threshold gating are encapsulated.
+
+
 Slot click vs drag disambiguation: slot `onClick` dispatches PLACE_STONE, which only succeeds in `ready` mode. During a drag, the first WIND transitions to `winding`, so any accidental slot click is a no-op. No explicit click-vs-drag threshold needed.
 
 ## Alternatives considered
@@ -41,7 +44,7 @@ Slot click vs drag disambiguation: slot `onClick` dispatches PLACE_STONE, which 
 
 ## Consequences
 
-- **Positive**: No external gesture dependencies. ~30 lines of event handling.
+- **Positive**: No external gesture dependencies. The `useWheelGesture` hook encapsulates all pointer handling in ~100 lines; callers get a 1-line API.
 - **Positive**: Pointer capture ensures smooth tracking even if the finger moves quickly off the wheel.
 - **Positive**: Angular-only computation means the entire wheel surface is a valid drag target with consistent feel.
 - **Negative**: The `atan2` computation runs on every pointermove (~60Hz on mobile). Negligible for a single calculation, but worth noting if future features add expensive per-frame work.

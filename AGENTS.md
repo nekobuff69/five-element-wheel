@@ -17,6 +17,8 @@ The triage state machine uses the default label vocabulary (`needs-triage`, `nee
   - `0003-tonejs-transport-audio.md` — tone.js PluckSynth + Transport scheduling
   - `0004-angular-pointer-drag.md` — pointer events with angular delta
   - `0005-flat-file-structure-pwa.md` — flat src/ layout + Vite PWA
+  - `0006-native-web-audio-playback.md` — native Web Audio replaces tone.js
+  - `0007-raf-sync-audio-visual.md` — rAF + AudioContext clock for visual sync
 
 ### Tech stack
 
@@ -35,15 +37,16 @@ The triage state machine uses the default label vocabulary (`needs-triage`, `nee
 ```
 src/
   main.tsx, App.tsx            — entry + root component
-  types.ts                     — ElementType, WheelState, WheelAction, constants
-  wheelReducer.ts              — pure reducer + initialWheelState
+  types.ts                     — ElementType, WheelState, WheelAction, geometry constants
+  wheelReducer.ts              — pure reducer + initialWheelState + helpers
   wheelReducer.test.ts         — 55 unit tests
-  Wheel.tsx                    — pointer events, spring-back, slot rendering
+  playback.ts                  — AudioContext, tack sound, rAF-synced spring-back playback
+  useWheelGesture.ts           — pointer-drag gesture hook (angular delta + threshold)
+  Wheel.tsx                    — orchestrator: gesture → dispatch → playback
   Slot.tsx                     — empty/filled/glow/dim states
   Head.tsx                     — fixed marker at 6 o'clock
   StonePalette.tsx             — 5 stone circles + Clear
   BPMControl.tsx               — range slider + "C Pentatonic"
-  audio.ts                     — native Web Audio API scheduler
   index.css                    — all styles
 ```
 
@@ -54,6 +57,6 @@ src/
 - Empty slots are rests — the 10-beat grid is always maintained.
 - Spring-back duration = `queuedSlotCount × (60 / BPM)` seconds.
 - CSS transition and audio scheduling fire in the same useEffect frame.
-- AudioContext resumes on first palette tap (not on wheel touch).
+- AudioContext auto-resumes on first audio-producing action (tack sound or spring-back playback).
 - Pointer events gated by mode: only `ready` and `winding` accept input.
 - `PLACE_STONE` only valid in `ready` — accidental clicks during drag are no-ops.

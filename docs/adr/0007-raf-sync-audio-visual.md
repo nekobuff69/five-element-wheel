@@ -24,15 +24,15 @@ const elapsed = ctx.currentTime - t0;
 const currentBeat = Math.floor(elapsed / beatInterval);
 ```
 
-The rAF loop runs at the compositor rate (~60fps), checking every frame whether the beat boundary has been crossed. When it has, it updates `springBackPlayingIndex`. This eliminates drift because visual and audio share the same clock.
+The rAF loop lives in `playback.ts` and runs at the compositor rate (~60fps), checking every frame whether the beat boundary has been crossed. When it has, it fires the `onBeat` callback which updates `springBackPlayingIndex` via `setSpringBackPlayingIndex`. This eliminates drift because visual and audio share the same clock.
 
 ### 2. Shared `t0` origin
 
-The caller (`useEffect` on `state.mode === 'springBack'`) computes `t0 = ctx.currentTime + 0.05` (50ms lookahead) and passes it to both `playSequence()` and the rAF loop. CSS transition starts in the same frame. All three consumers — audio scheduler, rAF visual loop, and CSS transition — share the same time origin.
+`startPlayback()` in `playback.ts` computes `t0 = ctx.currentTime + 0.05` (50ms lookahead) internally. The `useEffect` in `Wheel.tsx` calls `startPlayback(config, onBeat, onComplete)`. The rAF loop and audio scheduler share this `t0`. CSS transition starts in the same frame. All three consumers — audio scheduler, rAF visual loop, and CSS transition — share the same time origin.
 
 ### 3. Playback order = encounter order (no sorting)
 
-`playSequence()` and the rAF loop both use `state.queuedSlotIndices` directly, without sorting. Stones play in the exact order they crossed the head during winding. CW drag → stones queued CW → plays CW. CCW drag → stones queued CCW → plays CCW.
+Both the audio scheduler and the rAF loop (inside `startPlayback()`) use `state.queuedSlotIndices` directly, without sorting. Stones play in the exact order they crossed the head during winding. CW drag → stones queued CW → plays CW. CCW drag → stones queued CCW → plays CCW.
 
 The previous ascending/descending sort was removed because it created a mismatch between what the user wound and what played back.
 
@@ -42,9 +42,9 @@ When `currentBeat` maps to an empty slot, `springBackPlayingIndex` is set to `-1
 
 ### 5. rAF lifecycle
 
-- **Start**: When `state.mode` transitions to `'springBack'`, the effect sets up `playbackRef` and starts the rAF loop.
+- **Start**: When `state.mode` transitions to `'springBack'`, the effect calls `startPlayback(config, onBeat, onComplete)`, which creates an internal `PlaybackState` object and starts the rAF loop.
 - **Self-terminate**: When `elapsed >= totalDuration + 0.5 × beatInterval`, the loop dispatches `COMPLETE` and stops requesting frames.
-- **Cleanup**: `useEffect` cleanup calls `cancelAnimationFrame` on unmount or mode change.
+- **Cleanup**: The returned cancel function sets `PlaybackState.cancelled = true` and calls `cancelAnimationFrame` on unmount or mode change.
 - **`transitionend` fallback**: Remains as a safety net — if rAF is throttled hard, CSS will still fire and dispatch `COMPLETE`.
 
 ### 6. `springBackPlayingIndex` interpretation
@@ -64,7 +64,7 @@ The index now means "position in the encounter-order array" (`state.queuedSlotIn
 
 - **Positive**: Audio and visual locked to the same hardware clock. No perceptible drift.
 - **Positive**: Playback order matches winding order — no cognitive gap between what the user did and what plays back.
-- **Positive**: `playbackRef` holds all state in one place — no stale closure risk.
+- **Positive**: `PlaybackState` holds all state in one place inside `playback.ts` — no stale closure risk.
 - **Positive**: Self-termination + `cancelAnimationFrame` cleanup = no leaked rAF loops.
 - **Negative**: rAF loop creates React state updates on every frame during playback (60fps × ~10 beats = ~10 actual updates, since `springBackPlayingIndex` only changes on beat boundaries). Negligible at 10 slots.
 - **Negative**: If the tab is backgrounded during playback, rAF stops. Audio continues (scheduled on hardware clock), visual resumes when tab is foregrounded. User may see a visual jump to the current beat.

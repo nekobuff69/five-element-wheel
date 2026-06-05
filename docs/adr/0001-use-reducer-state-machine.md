@@ -38,5 +38,5 @@ The reducer is a pure function: `(state, action) → state`. Every action handle
 
 - **Positive**: 55 unit tests cover every state transition, every action in every valid state, edge cases (all empty, all filled, early release, CW vs CCW), and the full READY→COMPLETE→READY cycle. Tests are fast (~8ms total) and run on every change.
 - **Positive**: Components never need to check "can I dispatch this?" — they dispatch and the reducer no-ops if invalid.
-- **Negative**: The WIND action handler is the most complex (~30 lines) because it manages rotation capping, direction detection, and slot queuing in one pass.
-- **Neutral**: The reducer is ~100 lines. Well within maintainable range for a single-concern module.
+- **Negative**: The WIND action handler is the most complex (~20 lines) — rotation capping, direction detection, and slot queuing coordination. The crossing-detection algorithm is extracted into a pure `collectCrossings` helper (~20 lines) for clarity.
+- **Neutral**: The reducer function is ~90 lines; with helpers and initial state the module is ~169 lines. Well within maintainable range for a single-concern module.

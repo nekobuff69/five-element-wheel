@@ -6,7 +6,7 @@ Accepted (implemented).
 
 ## Context
 
-The Five-Element Wheel is a single-screen mobile PWA with ~12 source files. We needed a project structure and build toolchain that:
+The Five-Element Wheel is a single-screen mobile PWA with ~13 source files. We needed a project structure and build toolchain that:
 
 - Supports React + TypeScript with strict mode
 - Produces an installable PWA with offline support
@@ -15,7 +15,7 @@ The Five-Element Wheel is a single-screen mobile PWA with ~12 source files. We n
 
 ## Decision
 
-**File structure**: All source code in `src/` — no feature folders, no `components/`, `hooks/`, `utils/` subdirectories. 11 TypeScript files + 1 CSS file:
+**File structure**: All source code in `src/` — no feature folders, no `components/`, `hooks/`, `utils/` subdirectories. 12 TypeScript files + 1 CSS file:
 
 ```
 src/
@@ -29,7 +29,8 @@ src/
   Head.tsx             — Fixed marker at 6 o'clock
   StonePalette.tsx     — 5 stones + Clear button
   BPMControl.tsx       — Range slider + "C Pentatonic" label
-  audio.ts             — native Web Audio API playback + tack
+  playback.ts          ← native Web Audio + rAF sync
+  useWheelGesture.ts   ← pointer-drag gesture hook
   index.css            — All styles with custom properties
 ```
 
@@ -49,7 +50,7 @@ src/
 
 ## Consequences
 
-- **Positive**: A new developer can understand the entire codebase by reading 12 files in a flat directory.
+- **Positive**: A new developer can understand the entire codebase by reading 13 files in a flat directory.
 - **Positive**: `bun run build` produces a 414KB PWA bundle that works fully offline after first visit.
 - **Negative**: If the app grows beyond ~20 files, the flat structure will become unwieldy. At that point, extract `src/components/` and `src/state/`. The ADR should be revisited before the 20-file threshold.
 - **Negative**: The 192px and 512px icons are programmatically generated placeholders (5-color wheel segments). They should be replaced with a proper designed icon before production release.
