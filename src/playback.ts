@@ -18,17 +18,7 @@ export function getAudioContext(): AudioContext {
   return audioCtx;
 }
 
-
-export function initAudio(): void {
-  const ctx = getAudioContext();
-  if (ctx.state === 'suspended') {
-    ctx.resume();
-  }
-  console.log('[initAudio] ctx.state=', ctx.state);
-}
-
-
-export function playTack(): void {
+export function playTackSound(): void {
   const ctx = getAudioContext();
   if (ctx.state === 'suspended') {
     ctx.resume();
@@ -68,32 +58,47 @@ export function playTack(): void {
   osc.stop(now + 0.03);
 }
 
-export function playSequence(
-  queuedSlotIndices: number[],
-  slots: (ElementType | null)[],
-  bpm: number,
-  direction: WindDirection,
-  t0: number
-): void {
-  const ctx = getAudioContext();
-  console.log('[playSequence] ctx.state=', ctx.state, 'queued=', queuedSlotIndices.length, 'bpm=', bpm);
+interface PlaybackConfig {
+  queuedSlotIndices: number[];
+  slots: (ElementType | null)[];
+  bpm: number;
+  direction: WindDirection;
+}
 
+interface PlaybackState {
+  t0: number;
+  beatInterval: number;
+  indices: number[];
+  slots: (ElementType | null)[];
+  count: number;
+  rafId: number | null;
+  completed: boolean;
+  cancelled: boolean;
+}
+
+export function startPlayback(
+  config: PlaybackConfig,
+  onBeat: (queueIndex: number) => void,
+  onComplete: () => void
+): () => void {
+  const ctx = getAudioContext();
   if (ctx.state === 'suspended') {
-    console.log('[playSequence] resuming suspended AudioContext');
     ctx.resume();
   }
 
-  // Use encounter order (no sorting — queue order matches winding order)
+  const { queuedSlotIndices, slots, bpm, direction } = config;
   const indices = queuedSlotIndices;
-
   const N = indices.length;
-  if (N === 0) return;
+  if (N === 0) {
+    onComplete();
+    return () => {};
+  }
 
   const beatInterval = 60 / bpm;
   const noteDuration = beatInterval * 0.6;
+  const t0 = ctx.currentTime + 0.05; // 50ms lookahead
 
-  console.log('[playSequence] scheduling', N, 'notes, beatInterval=', beatInterval.toFixed(2), 's, t0=', t0.toFixed(2));
-
+  // Schedule audio notes
   indices.forEach((slotIndex, i) => {
     const element = slots[slotIndex];
     if (!element) return;
@@ -103,8 +108,6 @@ export function playSequence(
 
     const startTime = t0 + i * beatInterval;
     const endTime = startTime + noteDuration;
-
-    console.log('[playSequence] note', i, element, freq, 'Hz at t=', startTime.toFixed(2));
 
     const osc = ctx.createOscillator();
     osc.type = 'triangle';
@@ -125,10 +128,51 @@ export function playSequence(
     };
   });
 
-  console.log('[playSequence] all notes scheduled');
-}
+  // rAF loop synced to AudioContext clock
+  const pb: PlaybackState = {
+    t0,
+    beatInterval,
+    indices,
+    slots,
+    count: N,
+    rafId: null,
+    completed: false,
+    cancelled: false,
+  };
 
-export function stopAudio(): void {
-  // Native Web Audio nodes are self-cleaning via onended handlers.
-  // No-op: kept for API compatibility with callers.
+  const tick = () => {
+    if (pb.cancelled || pb.completed) return;
+
+    const elapsed = ctx.currentTime - pb.t0;
+    const currentBeat = Math.floor(elapsed / pb.beatInterval);
+
+    const totalDuration = pb.count * pb.beatInterval;
+    if (elapsed >= totalDuration + pb.beatInterval * 0.5) {
+      pb.completed = true;
+      pb.rafId = null;
+      onComplete();
+      return;
+    }
+
+    if (currentBeat >= 0 && currentBeat < pb.indices.length) {
+      const slotIdx = pb.indices[currentBeat];
+      if (pb.slots[slotIdx] !== null) {
+        onBeat(currentBeat);
+      } else {
+        onBeat(-1);
+      }
+    }
+
+    pb.rafId = requestAnimationFrame(tick);
+  };
+
+  pb.rafId = requestAnimationFrame(tick);
+
+  return () => {
+    pb.cancelled = true;
+    if (pb.rafId !== null) {
+      cancelAnimationFrame(pb.rafId);
+      pb.rafId = null;
+    }
+  };
 }

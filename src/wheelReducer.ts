@@ -1,4 +1,5 @@
 import type { WheelState, WheelAction, WindDirection } from './types';
+import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE, HEAD_ANGLE } from './types';
 
 export const initialWheelState: WheelState = {
   mode: 'ready',
@@ -11,16 +12,13 @@ export const initialWheelState: WheelState = {
   bpm: 100,
 };
 
-const SLOT_ANGLE_SPAN = 300 / 9;
-const SLOT_START = 210;
-const HEAD_ANGLE = 180;
 
 function getSlotAtHead(rotation: number, direction?: WindDirection | null): number {
   let best = 0;
   let bestDist = Infinity;
 
   for (let i = 0; i < 10; i++) {
-    const angle = ((SLOT_START + i * SLOT_ANGLE_SPAN + rotation) % 360 + 360) % 360;
+    const angle = ((SLOT_START_ANGLE + i * SLOT_ANGLE_SPAN + rotation) % 360 + 360) % 360;
     let dist = Math.abs(angle - HEAD_ANGLE);
     if (dist > 180) dist = 360 - dist;
 
@@ -38,7 +36,7 @@ function getSlotAtHead(rotation: number, direction?: WindDirection | null): numb
 }
 
 function didCross(slot: number, prevRot: number, newRot: number, step: number): boolean {
-  const baseAngle = SLOT_START + slot * SLOT_ANGLE_SPAN;
+  const baseAngle = SLOT_START_ANGLE + slot * SLOT_ANGLE_SPAN;
   const prevAngle = ((baseAngle + prevRot) % 360 + 360) % 360;
   const newAngle = ((baseAngle + newRot) % 360 + 360) % 360;
   // CW (step=-1): crossed if slot moved from below 180° to at/above 180°
@@ -47,6 +45,36 @@ function didCross(slot: number, prevRot: number, newRot: number, step: number): 
     ? (prevAngle < HEAD_ANGLE && newAngle >= HEAD_ANGLE)
     : (prevAngle > HEAD_ANGLE && newAngle <= HEAD_ANGLE);
 }
+
+function collectCrossings(
+  prevSlot: number,
+  newSlot: number,
+  prevRotation: number,
+  newRotation: number,
+  step: number,
+  alreadyQueued: number[]
+): number[] {
+  const result: number[] = [];
+
+  // prevSlot may have crossed (especially on first wind from ready)
+  if (didCross(prevSlot, prevRotation, newRotation, step) && !alreadyQueued.includes(prevSlot)) {
+    result.push(prevSlot);
+  }
+
+  // Track slots between prev and new that crossed
+  if (prevSlot !== newSlot) {
+    let cursor = prevSlot;
+    while (cursor !== newSlot) {
+      cursor = (cursor + step + 10) % 10;
+      if (didCross(cursor, prevRotation, newRotation, step) && !alreadyQueued.includes(cursor) && !result.includes(cursor)) {
+        result.push(cursor);
+      }
+    }
+  }
+
+  return result;
+}
+
 
 export function wheelReducer(state: WheelState, action: WheelAction): WheelState {
   switch (action.type) {
@@ -89,26 +117,9 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
       if (newRotation < -360) newRotation = -360;
 
       const newSlot = getSlotAtHead(newRotation, direction);
-      const queued = [...state.queuedSlotIndices];
-
-      // Only queue slots that physically crossed the head (180°)
       const step = newRotation > state.rotation ? -1 : 1;
-
-      // prevSlot may have crossed (especially on first wind from ready)
-      if (didCross(prevSlot, state.rotation, newRotation, step) && !queued.includes(prevSlot)) {
-        queued.push(prevSlot);
-      }
-
-      // Track slots between prev and new that crossed
-      if (prevSlot !== newSlot) {
-        let cursor = prevSlot;
-        while (cursor !== newSlot) {
-          cursor = (cursor + step + 10) % 10;
-          if (didCross(cursor, state.rotation, newRotation, step) && !queued.includes(cursor)) {
-            queued.push(cursor);
-          }
-        }
-      }
+      const newlyCrossed = collectCrossings(prevSlot, newSlot, state.rotation, newRotation, step, state.queuedSlotIndices);
+      const queued = [...state.queuedSlotIndices, ...newlyCrossed];
 
       return {
         ...state,
