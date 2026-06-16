@@ -135,6 +135,60 @@ describe('PLACE_STONE', () => {
     const s = wheelReducer(tacked, { type: 'PLACE_STONE', slotIndex: 3 });
     expect(s).toBe(tacked);
   });
+// ============================================================ REMOVE_STONE
+
+describe('REMOVE_STONE', () => {
+  it('removes stone from a filled slot in ready mode', () => {
+    const placed = place(select(initialWheelState, 'wood'), 4);
+    expect(placed.slots[4]).toBe('wood');
+    const s = wheelReducer(placed, { type: 'REMOVE_STONE', slotIndex: 4 });
+    expect(s.slots[4]).toBeNull();
+    expect(s.mode).toBe('ready');
+  });
+
+  it('is no-op when slot is already empty', () => {
+    const s = wheelReducer(initialWheelState, { type: 'REMOVE_STONE', slotIndex: 3 });
+    expect(s).toBe(initialWheelState);
+  });
+
+  it('removes stone in springBack mode', () => {
+    const placed = place(select(initialWheelState, 'fire'), 7);
+    const wind = cw(placed, 36);
+    const released = wheelReducer(wind, { type: 'RELEASE' });
+    expect(released.mode).toBe('springBack');
+    const s = wheelReducer(released, { type: 'REMOVE_STONE', slotIndex: 7 });
+    expect(s.slots[7]).toBeNull();
+  });
+
+  it.each(['winding', 'tack'] as const)(
+    'is no-op in %s mode',
+    (mode) => {
+      const placed = place(select(initialWheelState, 'metal'), 2);
+      let s = placed;
+      if (mode === 'winding') {
+        s = cw(s, 36);
+      } else {
+        s = cw(s, 36);
+        s = wheelReducer(s, { type: 'TACK' });
+      }
+      expect(wheelReducer(s, { type: 'REMOVE_STONE', slotIndex: 2 })).toBe(s);
+    },
+  );
+
+  it('only removes the specified slot, not others', () => {
+    let s = select(initialWheelState, 'earth');
+    s = place(s, 0);
+    s = select(s, 'metal');
+    s = place(s, 1);
+    s = select(s, 'water');
+    s = place(s, 5);
+    const removed = wheelReducer(s, { type: 'REMOVE_STONE', slotIndex: 1 });
+    expect(removed.slots[0]).toBe('earth');
+    expect(removed.slots[1]).toBeNull();
+    expect(removed.slots[5]).toBe('water');
+    expect(removed.slots.filter(Boolean)).toHaveLength(2);
+  });
+});
 
 // =============================================================== CLEAR_ALL
 

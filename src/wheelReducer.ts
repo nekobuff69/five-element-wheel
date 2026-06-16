@@ -86,6 +86,14 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
       if (state.mode !== 'ready') return state;
       return { ...state, selectedStone: action.element };
     }
+    case 'REMOVE_STONE': {
+      if (state.mode !== 'ready' && state.mode !== 'springBack') return state;
+      if (state.slots[action.slotIndex] === null) return state;
+      const newSlots = [...state.slots];
+      newSlots[action.slotIndex] = null;
+      return { ...state, slots: newSlots };
+    }
+
 
     case 'PLACE_STONE': {
       if (state.mode !== 'ready' && state.mode !== 'springBack') return state;

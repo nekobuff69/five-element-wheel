@@ -1,10 +1,12 @@
 import type { WheelState, WheelAction, ElementType } from './types';
+import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
 import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE } from './geometry';
 import Slot from './Slot';
 import Head from './Head';
 import { useRef } from 'react';
 import { useWheelGesture } from './useWheelGesture';
 import { useWheelPlayback } from './useWheelPlayback';
+import { useSlotDrag } from './useSlotDrag';
 interface WheelProps {
   state: WheelState;
   dispatch: React.Dispatch<WheelAction>;
@@ -27,6 +29,14 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
   const wheelRef = useRef<HTMLDivElement>(null!);
   const { springBackPlayingIndex, playbackRef } = useWheelPlayback(state, dispatch);
   useWheelGesture(wheelRef, state.mode, (delta) => dispatch({ type: 'WIND', delta }), () => dispatch({ type: 'RELEASE' }));
+  const {
+    draggingFromSlotIndex,
+    ghostElement: slotGhostElement,
+    ghostPosition: slotGhostPosition,
+    isFadingOut: slotGhostFading,
+    snapTargetSlot: slotDragSnapTarget,
+    handleSlotPointerDown,
+  } = useSlotDrag(dispatch, state.rotation);
 
 
   function getWheelStyle(): React.CSSProperties {
@@ -83,11 +93,19 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
                 element={state.slots[i]}
                 isAtHead={state.currentSlotAtHead === i}
                 counterRotation={counterRotation}
-                onClick={() => dispatch({ type: 'PLACE_STONE', slotIndex: i })}
+                onClick={() => {
+                  if (state.slots[i] !== null && state.slots[i] === state.selectedStone) {
+                    dispatch({ type: 'REMOVE_STONE', slotIndex: i });
+                  } else {
+                    dispatch({ type: 'PLACE_STONE', slotIndex: i });
+                  }
+                }}
+                onPointerDown={state.slots[i] !== null ? (e) => handleSlotPointerDown(i, state.slots[i]!, e) : undefined}
                 mode={state.mode}
                 isPlayed={isPlayed}
                 isCurrentlyPlaying={isCurrentlyPlaying}
-                isSnapTarget={snapTargetSlot === i}
+                isSnapTarget={snapTargetSlot === i || slotDragSnapTarget === i}
+                isDraggedAway={draggingFromSlotIndex === i}
               />
             </div>
           );
@@ -102,6 +120,18 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
         }
         isSpringBack={state.mode === 'springBack'}
       />
+      {slotGhostElement && (slotGhostPosition || slotGhostFading) && (
+        <div
+          className={`stone-ghost${slotGhostFading ? ' stone-ghost--fading' : ''}`}
+          style={{
+            left: (slotGhostPosition?.x ?? 0),
+            top: (slotGhostPosition?.y ?? 0),
+            backgroundColor: ELEMENT_COLORS[slotGhostElement],
+          }}
+        >
+          {ELEMENT_SYMBOLS[slotGhostElement]}
+        </div>
+      )}
     </div>
   );
 }

@@ -7,18 +7,21 @@ interface SlotProps {
   isAtHead: boolean;
   counterRotation: number;
   onClick?: () => void;
+  onPointerDown?: (e: React.PointerEvent) => void;
   mode: WheelMode;
   isPlayed: boolean;
   isCurrentlyPlaying: boolean;
   isSnapTarget?: boolean;
+  isDraggedAway?: boolean;
 }
 
-function Slot({ index, element, isAtHead, counterRotation, onClick, mode, isPlayed, isCurrentlyPlaying, isSnapTarget }: SlotProps) {
+function Slot({ index, element, isAtHead, counterRotation, onClick, onPointerDown, mode, isPlayed, isCurrentlyPlaying, isSnapTarget, isDraggedAway }: SlotProps) {
+  const displayElement = isDraggedAway ? null : element;
   const className = [
     'slot',
-    element ? 'slot--filled' : 'slot--empty',
+    displayElement ? 'slot--filled' : 'slot--empty',
     isAtHead ? 'slot--at-head' : '',
-    isAtHead && element && mode === 'winding' ? 'slot--glow' : '',
+    isAtHead && displayElement && mode === 'winding' ? 'slot--glow' : '',
     isSnapTarget ? 'slot--glow' : '',
     isCurrentlyPlaying ? 'slot--playing' : '',
     isPlayed ? 'slot--dimmed' : '',
@@ -27,14 +30,15 @@ function Slot({ index, element, isAtHead, counterRotation, onClick, mode, isPlay
   return (
     <div
       className={className}
+      onPointerDown={onPointerDown}
       onClick={onClick}
       data-slot-index={index}
       style={{
-        backgroundColor: element ? ELEMENT_COLORS[element] : undefined,
+        backgroundColor: displayElement ? ELEMENT_COLORS[displayElement] : undefined,
         transform: `rotate(${counterRotation}deg)`,
       }}
     >
-      {element && ELEMENT_SYMBOLS[element]}
+      {displayElement && ELEMENT_SYMBOLS[displayElement]}
       <span className="slot__index">{index}</span>
     </div>
   );
