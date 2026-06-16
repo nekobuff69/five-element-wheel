@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { WheelState, WheelAction } from './types';
 import { playTackSound, startPlayback, type PlaybackControl, getAudioContext } from './playback';
 
@@ -66,7 +66,7 @@ export function useWheelPlayback(
   ]);
 
   // Hot-reload: update scheduled oscillators when slots change mid-playback
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (state.mode !== 'springBack') return;
     if (!playbackRef.current) return;
 

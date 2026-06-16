@@ -12,11 +12,10 @@ interface WheelProps {
   dispatch: React.Dispatch<WheelAction>;
   snapTargetSlot: number | null;
 }
-
 const SLOT_COUNT = 10;
-const SLOT_TOP = 10;
+const SLOT_TOP = 40;
 const SLOT_SIZE = 36;
-const WHEEL_RADIUS = 150;
+const WHEEL_RADIUS = 180;
 
 
 function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {

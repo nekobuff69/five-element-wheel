@@ -39,8 +39,8 @@ body {
 
 .wheel-container {
   position: relative;
-  width: 300px;
-  height: 300px;
+  width: 360px;
+  height: 360px;
   margin: 0 auto;
   touch-action: none;
   cursor: grab;

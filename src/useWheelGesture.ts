@@ -36,6 +36,8 @@ export function useWheelGesture(
     const container = wheelRef.current;
     if (!container) return;
     if (modeRef.current !== 'ready' && modeRef.current !== 'winding' && modeRef.current !== 'springBack') return;
+    // If pointer is on a filled slot, defer to slot-drag / slot-click
+    if ((e.target as Element).closest('.slot--filled')) return;
     container.setPointerCapture(e.pointerId);
     const rect = container.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
