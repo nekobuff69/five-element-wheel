@@ -86,10 +86,11 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
 
     case 'PLACE_STONE': {
       if (state.mode !== 'ready') return state;
-      if (state.selectedStone === null) return state;
-      if (state.slots[action.slotIndex] === state.selectedStone) return state;
+      const stoneToPlace = action.element ?? state.selectedStone;
+      if (stoneToPlace === null) return state;
+      if (state.slots[action.slotIndex] === stoneToPlace) return state;
       const newSlots = [...state.slots];
-      newSlots[action.slotIndex] = state.selectedStone;
+      newSlots[action.slotIndex] = stoneToPlace;
       return { ...state, slots: newSlots };
     }
 

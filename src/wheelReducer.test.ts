@@ -94,6 +94,23 @@ describe('PLACE_STONE', () => {
     const wind = cw(withStone);
     expect(wheelReducer(wind, { type: 'PLACE_STONE', slotIndex: 3 })).toBe(wind);
   });
+
+  it('uses provided element over selectedStone', () => {
+    const state = select(initialWheelState, 'earth');
+    const result = wheelReducer(state, { type: 'PLACE_STONE', slotIndex: 4, element: 'fire' });
+    expect(result.slots[4]).toBe('fire');
+    expect(result.selectedStone).toBe('earth'); // selectedStone unchanged
+  });
+
+  it('falls back to selectedStone when element not provided', () => {
+    const state = select(initialWheelState, 'wood');
+    const result = wheelReducer(state, { type: 'PLACE_STONE', slotIndex: 6 });
+    expect(result.slots[6]).toBe('wood');
+  });
+
+  it('returns state unchanged when neither element nor selectedStone is provided', () => {
+    expect(wheelReducer(initialWheelState, { type: 'PLACE_STONE', slotIndex: 0 })).toBe(initialWheelState);
+  });
 });
 
 // =============================================================== CLEAR_ALL

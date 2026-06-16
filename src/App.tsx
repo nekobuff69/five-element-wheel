@@ -18,6 +18,7 @@ function App() {
         onClear={() => {
           dispatch({ type: 'CLEAR_ALL' });
         }}
+        dispatch={dispatch}
       />
       <BPMControl
         bpm={state.bpm}

@@ -26,6 +26,7 @@ function Slot({ index, element, isAtHead, counterRotation, onClick, mode, isPlay
     <div
       className={className}
       onClick={onClick}
+      data-slot-index={index}
       style={{
         backgroundColor: element ? ELEMENT_COLORS[element] : undefined,
         transform: `rotate(${counterRotation}deg)`,
