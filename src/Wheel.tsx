@@ -1,5 +1,5 @@
 import type { WheelState, WheelAction, ElementType } from './types';
-import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE, SLOT_ORBIT_RADIUS } from './types';
+import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE } from './types';
 import Slot from './Slot';
 import Head from './Head';
 import { useEffect, useRef, useState } from 'react';
@@ -132,7 +132,7 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
                 top: `${SLOT_TOP}px`,
                 left: '50%',
                 transform: `translateX(-50%) rotate(${slotAngle}deg)`,
-                transformOrigin: `center ${SLOT_ORBIT_RADIUS}px`,
+                transformOrigin: `center ${WHEEL_RADIUS - SLOT_TOP}px`,
               }}
             >
               <Slot
