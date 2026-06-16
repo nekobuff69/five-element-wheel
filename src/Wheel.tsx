@@ -35,7 +35,7 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
     isFadingOut: slotGhostFading,
     snapTargetSlot: slotDragSnapTarget,
     handleSlotPointerDown,
-  } = useSlotDrag(dispatch, state.rotation);
+  } = useSlotDrag(dispatch);
 
 
   function getWheelStyle(): React.CSSProperties {

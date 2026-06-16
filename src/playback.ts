@@ -145,11 +145,27 @@ export function startPlayback(
     oscillators[absoluteBeat] = { osc, gain, slotIndex };
   }
 
+  // Playback state — initialized before scheduling so scheduleIteration reads pb.slots
+  const pb: PlaybackState = {
+    t0,
+    beatInterval,
+    indices,
+    slots: [...slots],
+    count: N,
+    rafId: null,
+    completed: false,
+    cancelled: false,
+    currentBeat: -1,
+    oscillators,
+    loop,
+    totalScheduledBeats: 0,
+  };
+
   // Schedule one iteration starting at the given beat offset
   function scheduleIteration(startBeat: number): void {
     for (let i = 0; i < N; i++) {
       const slotIndex = indices[i];
-      const element = slots[slotIndex];
+      const element = pb.slots[slotIndex];
       if (element) {
         scheduleNote(startBeat + i, slotIndex, element);
       }
@@ -161,22 +177,8 @@ export function startPlayback(
   for (let iter = 0; iter < INITIAL_ITERATIONS; iter++) {
     scheduleIteration(iter * N);
   }
+  pb.totalScheduledBeats = INITIAL_ITERATIONS * N;
 
-  // rAF loop synced to AudioContext clock
-  const pb: PlaybackState = {
-    t0,
-    beatInterval,
-    indices,
-    slots,
-    count: N,
-    rafId: null,
-    completed: false,
-    cancelled: false,
-    currentBeat: -1,
-    oscillators,
-    loop,
-    totalScheduledBeats: INITIAL_ITERATIONS * N,
-  };
 
   const tick = () => {
     if (pb.cancelled || pb.completed) return;

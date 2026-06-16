@@ -85,3 +85,44 @@ export function findSnapTarget(
 
   return null;
 }
+
+/**
+ * Find the nearest slot center within a distance threshold using
+ * actual DOM positions (getBoundingClientRect).
+ *
+ * Unlike the mathematical findSnapTarget, this reads the rendered
+ * positions of slot elements, so it works correctly during CSS
+ * transitions (e.g. springBack) where state.rotation is stale.
+ */
+export function findSnapTargetFromDOM(
+  cursorX: number,
+  cursorY: number,
+  threshold: number = 30
+): SnapTarget | null {
+  const slotEls = document.querySelectorAll<HTMLElement>('.wheel-container [data-slot-index]');
+  if (slotEls.length === 0) return null;
+
+  let nearestDist = Infinity;
+  let nearestIdx: number | null = null;
+  let nearestPos = { x: 0, y: 0 };
+
+  slotEls.forEach((el) => {
+    const idx = Number(el.getAttribute('data-slot-index'));
+    if (Number.isNaN(idx)) return;
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dist = Math.hypot(cx - cursorX, cy - cursorY);
+    if (dist < nearestDist) {
+      nearestDist = dist;
+      nearestIdx = idx;
+      nearestPos = { x: cx, y: cy };
+    }
+  });
+
+  if (nearestIdx !== null && nearestDist <= threshold) {
+    return { slotIndex: nearestIdx, x: nearestPos.x, y: nearestPos.y };
+  }
+
+  return null;
+}

@@ -20,7 +20,6 @@ function App() {
           dispatch({ type: 'CLEAR_ALL' });
         }}
         dispatch={dispatch}
-        wheelRotation={state.rotation}
         wheelMode={state.mode}
         onSnapTargetChange={setSnapTargetSlot}
       />

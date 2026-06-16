@@ -1,13 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ElementType, WheelAction } from './types';
-import { findSnapTarget, SLOT_ORBIT_RADIUS } from './geometry';
+import { findSnapTargetFromDOM } from './geometry';
 
 const SNAP_THRESHOLD_PX = 30;
-const SLOT_COUNT = 10;
 
 export function useSlotDrag(
   dispatch: React.Dispatch<WheelAction>,
-  wheelRotation: number,
 ) {
   const [sourceSlotIndex, setSourceSlotIndex] = useState<number | null>(null);
   const [ghostElement, setGhostElement] = useState<ElementType | null>(null);
@@ -20,10 +18,8 @@ export function useSlotDrag(
   const snapTargetRef = useRef<number | null>(null);
   const dispatchRef = useRef(dispatch);
   const ghostElementRef = useRef<ElementType | null>(null);
-  const wheelRotationRef = useRef(wheelRotation);
 
   useEffect(() => { dispatchRef.current = dispatch; });
-  useEffect(() => { wheelRotationRef.current = wheelRotation; });
   useEffect(() => { ghostElementRef.current = ghostElement; });
 
   const moveHandlerRef = useRef<((e: PointerEvent) => void) | null>(null);
@@ -59,27 +55,14 @@ export function useSlotDrag(
       const cursorX = e.clientX;
       const cursorY = e.clientY;
 
-      const wheelEl = document.querySelector('.wheel-container');
-      if (wheelEl) {
-        const rect = wheelEl.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
+      // Find nearest slot center for snap detection using DOM positions
+      const snap = findSnapTargetFromDOM(cursorX, cursorY, SNAP_THRESHOLD_PX);
 
-        const snap = findSnapTarget(
-          cursorX, cursorY,
-          cx, cy,
-          wheelRotationRef.current,
-          SLOT_COUNT,
-          SNAP_THRESHOLD_PX,
-          SLOT_ORBIT_RADIUS,
-        );
-
-        if (snap && snap.slotIndex !== sourceIdx) {
-          setGhostPosition({ x: snap.x, y: snap.y });
-          setSnapTargetSlot(snap.slotIndex);
-          snapTargetRef.current = snap.slotIndex;
-          return;
-        }
+      if (snap && snap.slotIndex !== sourceIdx) {
+        setGhostPosition({ x: snap.x, y: snap.y });
+        setSnapTargetSlot(snap.slotIndex);
+        snapTargetRef.current = snap.slotIndex;
+        return;
       }
 
       // No snap — follow cursor

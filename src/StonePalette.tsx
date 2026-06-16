@@ -1,11 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ElementType, WheelMode } from './types';
 import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
-import { SLOT_ORBIT_RADIUS, findSnapTarget } from './geometry';
+import { findSnapTargetFromDOM } from './geometry';
 import type { WheelAction } from './types';
 
 const ELEMENTS: ElementType[] = ['earth', 'metal', 'wood', 'fire', 'water'];
-const SLOT_COUNT = 10;
 const SNAP_THRESHOLD_PX = 30;
 
 interface StonePaletteProps {
@@ -13,22 +12,19 @@ interface StonePaletteProps {
   onSelectStone: (element: ElementType) => void;
   onClear: () => void;
   dispatch: React.Dispatch<WheelAction>;
-  wheelRotation: number;
   wheelMode: WheelMode;
   onSnapTargetChange: (slotIndex: number | null) => void;
 }
 
-function StonePalette({ selectedStone, onSelectStone, onClear, dispatch, wheelRotation, wheelMode, onSnapTargetChange }: StonePaletteProps) {
+function StonePalette({ selectedStone, onSelectStone, onClear, dispatch, wheelMode, onSnapTargetChange }: StonePaletteProps) {
   const [draggingElement, setDraggingElement] = useState<ElementType | null>(null);
   const [ghostPosition, setGhostPosition] = useState<{ x: number; y: number } | null>(null);
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [snapTargetSlot, setSnapTargetSlot] = useState<number | null>(null);
   const snapTargetSlotRef = useRef<number | null>(null);
   const draggingRef = useRef<ElementType | null>(null);
-  const wheelRotationRef = useRef(wheelRotation);
   const onSnapTargetChangeRef = useRef(onSnapTargetChange);
   const dispatchRef = useRef(dispatch);
-  useEffect(() => { wheelRotationRef.current = wheelRotation; });
   useEffect(() => { onSnapTargetChangeRef.current = onSnapTargetChange; });
   useEffect(() => { dispatchRef.current = dispatch; });
   const moveHandlerRef = useRef<((e: PointerEvent) => void) | null>(null);
@@ -52,29 +48,15 @@ function StonePalette({ selectedStone, onSelectStone, onClear, dispatch, wheelRo
       const cursorX = e.clientX;
       const cursorY = e.clientY;
 
-      // Find nearest slot center for snap detection
-      const wheelEl = document.querySelector('.wheel-container');
-      if (wheelEl) {
-        const rect = wheelEl.getBoundingClientRect();
-        const cx = rect.left + rect.width / 2;
-        const cy = rect.top + rect.height / 2;
+      // Find nearest slot center for snap detection using DOM positions
+      const snap = findSnapTargetFromDOM(cursorX, cursorY, SNAP_THRESHOLD_PX);
 
-        const snap = findSnapTarget(
-          cursorX, cursorY,
-          cx, cy,
-          wheelRotationRef.current,
-          SLOT_COUNT,
-          SNAP_THRESHOLD_PX,
-          SLOT_ORBIT_RADIUS
-        );
-
-        if (snap) {
-          setGhostPosition({ x: snap.x, y: snap.y });
-          setSnapTargetSlot(snap.slotIndex);
-          snapTargetSlotRef.current = snap.slotIndex;
-          onSnapTargetChangeRef.current(snap.slotIndex);
-          return;
-        }
+      if (snap) {
+        setGhostPosition({ x: snap.x, y: snap.y });
+        setSnapTargetSlot(snap.slotIndex);
+        snapTargetSlotRef.current = snap.slotIndex;
+        onSnapTargetChangeRef.current(snap.slotIndex);
+        return;
       }
 
       // No snap — follow cursor
