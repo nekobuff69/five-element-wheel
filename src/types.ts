@@ -13,6 +13,7 @@ export interface WheelState {
   queuedSlotIndices: number[];
   currentSlotAtHead: number | null;
   bpm: number;
+  loop: boolean;
 }
 
 export type WheelAction =
@@ -23,7 +24,8 @@ export type WheelAction =
   | { type: 'RELEASE' }
   | { type: 'TACK' }
   | { type: 'COMPLETE' }
-  | { type: 'SET_BPM'; bpm: number };
+  | { type: 'SET_BPM'; bpm: number }
+  | { type: 'SET_LOOP'; loop: boolean };
 
 export const ELEMENT_TO_NOTE: Record<ElementType, string> = {
   earth: 'C4',

@@ -36,6 +36,7 @@ describe('initial state', () => {
     expect(initialWheelState.queuedSlotIndices).toEqual([]);
     expect(initialWheelState.currentSlotAtHead).toBeNull();
     expect(initialWheelState.bpm).toBe(100);
+    expect(initialWheelState.loop).toBe(true);
   });
 });
 
@@ -369,6 +370,31 @@ describe('SET_BPM', () => {
     const wind = cw(initialWheelState, 36);
     const s = wheelReducer(wind, { type: 'SET_BPM', bpm: 72 });
     expect(s.bpm).toBe(72);
+  });
+});
+
+// ================================================================ SET_LOOP
+
+describe('SET_LOOP', () => {
+  it('sets loop to false', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_LOOP', loop: false });
+    expect(s.loop).toBe(false);
+  });
+
+  it('sets loop to true', () => {
+    const s = wheelReducer(
+      wheelReducer(initialWheelState, { type: 'SET_LOOP', loop: false }),
+      { type: 'SET_LOOP', loop: true },
+    );
+    expect(s.loop).toBe(true);
+  });
+
+  it('works in any state', () => {
+    const s = wheelReducer(
+      wheelReducer(initialWheelState, { type: 'WIND', delta: 36 }),
+      { type: 'SET_LOOP', loop: false },
+    );
+    expect(s.loop).toBe(false);
   });
 });
 

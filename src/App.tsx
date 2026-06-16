@@ -3,6 +3,7 @@ import { wheelReducer, initialWheelState } from './wheelReducer';
 import Wheel from './Wheel';
 import StonePalette from './StonePalette';
 import BPMControl from './BPMControl';
+import LoopToggle from './LoopToggle';
 
 function App() {
   const [state, dispatch] = useReducer(wheelReducer, initialWheelState);
@@ -21,6 +22,10 @@ function App() {
       <BPMControl
         bpm={state.bpm}
         onBPMChange={(bpm) => dispatch({ type: 'SET_BPM', bpm })}
+      />
+      <LoopToggle
+        loop={state.loop}
+        onToggle={(loop) => dispatch({ type: 'SET_LOOP', loop })}
       />
       <Wheel state={state} dispatch={dispatch} />
     </div>

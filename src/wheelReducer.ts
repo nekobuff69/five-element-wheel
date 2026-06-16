@@ -10,6 +10,7 @@ export const initialWheelState: WheelState = {
   queuedSlotIndices: [],
   currentSlotAtHead: null,
   bpm: 100,
+  loop: true,
 };
 
 
@@ -155,12 +156,17 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
         slots: state.slots,
         selectedStone: state.selectedStone,
         bpm: state.bpm,
+        loop: state.loop,
       };
     }
 
     case 'SET_BPM': {
       const bpm = Math.max(60, Math.min(180, action.bpm));
       return { ...state, bpm };
+    }
+
+    case 'SET_LOOP': {
+      return { ...state, loop: action.loop };
     }
 
     default:
