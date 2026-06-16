@@ -75,7 +75,7 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
           const counterRotation = -(effectiveRotation + slotAngle);
           const sortedPos = playbackIndices.indexOf(i);
           const isCurrentlyPlaying = sortedPos >= 0 && sortedPos === springBackPlayingIndex;
-          const isPlayed = sortedPos >= 0 && sortedPos < springBackPlayingIndex;
+          const isDimmed = state.mode === 'springBack' && state.slots[i] !== null && !isCurrentlyPlaying;
           return (
             <div
               key={i}
@@ -101,7 +101,7 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
                 }}
                 onPointerDown={state.slots[i] !== null ? (e) => handleSlotPointerDown(i, state.slots[i]!, e) : undefined}
                 mode={state.mode}
-                isPlayed={isPlayed}
+                isDimmed={isDimmed}
                 isCurrentlyPlaying={isCurrentlyPlaying}
                 isSnapTarget={snapTargetSlot === i || slotDragSnapTarget === i}
                 isDraggedAway={draggingFromSlotIndex === i}

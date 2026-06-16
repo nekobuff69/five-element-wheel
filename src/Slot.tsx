@@ -9,13 +9,13 @@ interface SlotProps {
   onClick?: () => void;
   onPointerDown?: (e: React.PointerEvent) => void;
   mode: WheelMode;
-  isPlayed: boolean;
+  isDimmed: boolean;
   isCurrentlyPlaying: boolean;
   isSnapTarget?: boolean;
   isDraggedAway?: boolean;
 }
 
-function Slot({ index, element, isAtHead, counterRotation, onClick, onPointerDown, mode, isPlayed, isCurrentlyPlaying, isSnapTarget, isDraggedAway }: SlotProps) {
+function Slot({ index, element, isAtHead, counterRotation, onClick, onPointerDown, mode, isDimmed, isCurrentlyPlaying, isSnapTarget, isDraggedAway }: SlotProps) {
   const displayElement = isDraggedAway ? null : element;
   const className = [
     'slot',
@@ -24,7 +24,7 @@ function Slot({ index, element, isAtHead, counterRotation, onClick, onPointerDow
     isAtHead && displayElement && mode === 'winding' ? 'slot--glow' : '',
     isSnapTarget ? 'slot--glow' : '',
     isCurrentlyPlaying ? 'slot--playing' : '',
-    isPlayed ? 'slot--dimmed' : '',
+    isDimmed ? 'slot--dimmed' : '',
   ].filter(Boolean).join(' ');
 
   return (

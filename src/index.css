@@ -269,9 +269,10 @@ body {
 .slot--playing {
   box-shadow: 0 0 18px 6px rgba(255, 255, 255, 0.7);
   filter: brightness(1.4);
+  transition: opacity 0.35s ease-out, filter 0.35s ease-out, box-shadow 0.35s ease-out;
 }
 
-/* Slot dimmed after playing during spring-back */
+/* Slot dimmed during spring-back (all filled non-playing slots) */
 .slot--dimmed {
   opacity: 0.45;
   filter: brightness(0.5) grayscale(0.4);
