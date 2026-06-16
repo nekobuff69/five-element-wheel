@@ -276,14 +276,16 @@ describe('WIND slot queuing', () => {
     // delta=36 → only slot 9 crosses 180° (slot 8 at 152° hasn't reached 180°)
     const s = cw(initialWheelState, 36);
     expect(s.queuedSlotIndices).toEqual([9]);
-    expect(s.currentSlotAtHead).toBe(9);
+    // After slot 9 is queued, glow moves to next approaching slot (8)
+    expect(s.currentSlotAtHead).toBe(8);
   });
 
   it('first CCW wind from ready queues the destination slot', () => {
     // delta=-36 → rotation=-36 → head slot = 0
     const s = ccw(initialWheelState, 36);
     expect(s.queuedSlotIndices).toEqual([0]);
-    expect(s.currentSlotAtHead).toBe(0);
+    // After slot 0 is queued, glow moves to next approaching slot (1)
+    expect(s.currentSlotAtHead).toBe(1);
   });
 
   it('queues intermediate and destination slots on subsequent CW winds', () => {

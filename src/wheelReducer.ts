@@ -15,11 +15,14 @@ export const initialWheelState: WheelState = {
 };
 
 
-function getSlotAtHead(rotation: number, direction?: WindDirection | null): number {
-  let best = 0;
+function getSlotAtHead(rotation: number, direction: WindDirection | null | undefined, queuedSlots: number[] = [], excludeQueued: boolean = false): number | null {
+  let best: number | null = null;
   let bestDist = Infinity;
 
   for (let i = 0; i < 10; i++) {
+    // Skip slots that have already been queued (only for visual feedback)
+    if (excludeQueued && queuedSlots.includes(i)) continue;
+
     const angle = ((SLOT_START_ANGLE + i * SLOT_ANGLE_SPAN + rotation) % 360 + 360) % 360;
     let dist = Math.abs(angle - HEAD_ANGLE);
     if (dist > 180) dist = 360 - dist;
@@ -115,17 +118,20 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
       // Compute prevSlot and newSlot with direction bias:
       // CW → floor favours slot 9 (right of head, approaches first)
       // CCW → round favours slot 0 (left of head, approaches first)
-      const prevSlot = getSlotAtHead(state.rotation, direction);
+      const prevSlot = getSlotAtHead(state.rotation, direction, effectiveQueued, false)!;
 
       // Accumulate rotation, cap at ±360
       let newRotation = state.rotation + action.delta;
       if (newRotation > 360) newRotation = 360;
       if (newRotation < -360) newRotation = -360;
 
-      const newSlot = getSlotAtHead(newRotation, direction);
+      const newSlot = getSlotAtHead(newRotation, direction, effectiveQueued, false)!;
       const step = newRotation > state.rotation ? -1 : 1;
       const newlyCrossed = collectCrossings(prevSlot, newSlot, state.rotation, newRotation, step, effectiveQueued);
       const queued = [...effectiveQueued, ...newlyCrossed];
+
+      // For visual feedback, exclude already-queued slots so glow moves to next approaching slot
+      const visualSlot = getSlotAtHead(newRotation, direction, queued, true);
 
       return {
         ...state,
@@ -133,7 +139,7 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
         rotation: newRotation,
         direction,
         queuedSlotIndices: queued,
-        currentSlotAtHead: newSlot,
+        currentSlotAtHead: visualSlot,
       };
     }
 
