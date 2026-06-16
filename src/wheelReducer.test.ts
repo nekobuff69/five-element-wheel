@@ -451,6 +451,13 @@ describe('COMPLETE', () => {
     expect(s.mode).toBe('springBack');
   });
 
+  it('COMPLETE with loop=true resets rotation to 0', () => {
+    const wind = cw(cw(initialWheelState, 36), 36);
+    const released = wheelReducer(wind, { type: 'RELEASE' });
+    expect(released.rotation).toBeGreaterThan(0); // rotation was accumulated during wind
+    const s = wheelReducer(released, { type: 'COMPLETE' });
+    expect(s.rotation).toBe(0);
+  });
   it('COMPLETE with loop=true preserves queuedSlotIndices', () => {
     const wind = cw(cw(initialWheelState, 36), 36);
     const released = wheelReducer(wind, { type: 'RELEASE' });
@@ -597,5 +604,38 @@ describe('edge cases', () => {
 
   it('PLACE_STONE with null selection does nothing', () => {
     expect(wheelReducer(initialWheelState, { type: 'PLACE_STONE', slotIndex: 0 })).toBe(initialWheelState);
+  });
+
+  it('fast CCW drag captures all crossing slots including newSlot', () => {
+    // Fast drag that crosses both slot 0 and slot 1 in one WIND event
+    // Slot 0: 210° → 140° (crossed 180°)
+    // Slot 1: 243.3° → 173.3° (crossed 180°)
+    const s = ccw(initialWheelState, 70);
+    expect(s.queuedSlotIndices).toContain(0);
+    expect(s.queuedSlotIndices).toContain(1);
+    expect(s.queuedSlotIndices).toHaveLength(2);
+  });
+
+  it('RELEASE captures approaching slot within 10° of head', () => {
+    // Wind CCW by 25° → slot 0 goes from 210° to 185° (5° above head)
+    // Slot is glowing but hasn't technically crossed yet
+    const wound = ccw(initialWheelState, 25);
+    expect(wound.currentSlotAtHead).toBe(0); // Slot 0 is glowing
+    expect(wound.queuedSlotIndices).not.toContain(0); // But not queued yet
+
+    // Release should capture it since it's within 10° of head
+    const released = wheelReducer(wound, { type: 'RELEASE' });
+    expect(released.queuedSlotIndices).toContain(0);
+  });
+
+  it('RELEASE does not capture slot far from head', () => {
+    // Wind CCW by 10° → slot 0 goes from 210° to 200° (20° above head)
+    const wound = ccw(initialWheelState, 10);
+    expect(wound.currentSlotAtHead).toBe(0);
+    expect(wound.queuedSlotIndices).not.toContain(0);
+
+    // Release should NOT capture it since it's > 10° from head
+    const released = wheelReducer(wound, { type: 'RELEASE' });
+    expect(released.queuedSlotIndices).not.toContain(0);
   });
 });

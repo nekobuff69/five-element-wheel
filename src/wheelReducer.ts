@@ -61,20 +61,17 @@ function collectCrossings(
 ): number[] {
   const result: number[] = [];
 
-  // prevSlot may have crossed (especially on first wind from ready)
-  if (didCross(prevSlot, prevRotation, newRotation, step) && !alreadyQueued.includes(prevSlot)) {
-    result.push(prevSlot);
-  }
+  const wouldCross = (slot: number) =>
+    didCross(slot, prevRotation, newRotation, step) &&
+    !alreadyQueued.includes(slot) &&
+    !result.includes(slot);
 
-  // Track slots between prev and new that crossed
-  if (prevSlot !== newSlot) {
-    let cursor = prevSlot;
-    while (cursor !== newSlot) {
-      cursor = (cursor + step + 10) % 10;
-      if (didCross(cursor, prevRotation, newRotation, step) && !alreadyQueued.includes(cursor) && !result.includes(cursor)) {
-        result.push(cursor);
-      }
-    }
+  // Walk from prevSlot through newSlot inclusive, checking each for crossing
+  let cursor = prevSlot;
+  if (wouldCross(cursor)) result.push(cursor);
+  while (cursor !== newSlot) {
+    cursor = (cursor + step + 10) % 10;
+    if (wouldCross(cursor)) result.push(cursor);
   }
 
   return result;
@@ -145,9 +142,25 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
 
     case 'RELEASE': {
       if (state.mode !== 'winding' && state.mode !== 'tack') return state;
+
+      // Capture the approaching slot if it's close to the head
+      let finalQueued = state.queuedSlotIndices;
+      const visualSlot = state.currentSlotAtHead;
+      if (visualSlot !== null && !state.queuedSlotIndices.includes(visualSlot)) {
+        const slotAngle = ((SLOT_START_ANGLE + visualSlot * SLOT_ANGLE_SPAN + state.rotation) % 360 + 360) % 360;
+        let dist = Math.abs(slotAngle - HEAD_ANGLE);
+        if (dist > 180) dist = 360 - dist;
+
+        // If within 10° of head, capture it
+        if (dist <= 10) {
+          finalQueued = [...state.queuedSlotIndices, visualSlot];
+        }
+      }
+
       return {
         ...state,
         mode: 'springBack',
+        queuedSlotIndices: finalQueued,
       };
     }
 
@@ -163,7 +176,7 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
     case 'COMPLETE': {
       if (state.mode !== 'springBack') return state;
       if (state.loop && state.queuedSlotIndices.length > 0) {
-        return { ...state, mode: 'springBack', loopIteration: state.loopIteration + 1 };
+        return { ...state, mode: 'springBack', rotation: 0, loopIteration: state.loopIteration + 1 };
       }
       return {
         ...initialWheelState,

@@ -105,6 +105,9 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
     if (state.mode !== 'springBack') return;
     if (e.propertyName !== 'transform') return;
     if (e.target !== e.currentTarget) return;
+    // When playback is active, let the rAF onComplete handle the COMPLETE dispatch.
+    // The CSS transition may finish before the audio clock has processed the final beat.
+    if (playbackRef.current) return;
     dispatch({ type: 'COMPLETE' });
   }
   return (
