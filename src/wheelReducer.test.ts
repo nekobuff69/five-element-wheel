@@ -35,8 +35,10 @@ describe('initial state', () => {
     expect(initialWheelState.direction).toBeNull();
     expect(initialWheelState.queuedSlotIndices).toEqual([]);
     expect(initialWheelState.currentSlotAtHead).toBeNull();
-    expect(initialWheelState.bpm).toBe(100);
-    expect(initialWheelState.loop).toBe(true);
+  expect(initialWheelState.bpm).toBe(180);
+  expect(initialWheelState.loop).toBe(true);
+  expect(initialWheelState.key).toBe('C');
+  expect(initialWheelState.octave).toBe(0);
   });
 });
 
@@ -432,7 +434,7 @@ describe('COMPLETE', () => {
     const s = wheelReducer(noLoop, { type: 'COMPLETE' });
     expect(s.slots[5]).toBe('earth');
     expect(s.selectedStone).toBe('earth');
-    expect(s.bpm).toBe(100);
+    expect(s.bpm).toBe(180);
   });
 
   it.each(['ready', 'winding', 'tack'] as const)(
@@ -531,6 +533,71 @@ describe('SET_LOOP', () => {
     expect(s.loop).toBe(false);
   });
 });
+// ================================================================ SET_KEY
+
+describe('SET_KEY', () => {
+  it('sets key to C', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_KEY', key: 'C' });
+    expect(s.key).toBe('C');
+  });
+
+  it('sets key to G', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_KEY', key: 'G' });
+    expect(s.key).toBe('G');
+  });
+
+  it('sets key to F#', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_KEY', key: 'F#' });
+    expect(s.key).toBe('F#');
+  });
+
+  it('rejects invalid key', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_KEY', key: 'Z' });
+    expect(s.key).toBe('C'); // unchanged
+  });
+
+  it('works in any state', () => {
+    const wind = cw(initialWheelState, 36);
+    const s = wheelReducer(wind, { type: 'SET_KEY', key: 'A' });
+    expect(s.key).toBe('A');
+  });
+});
+
+// =============================================================== SET_OCTAVE
+
+describe('SET_OCTAVE', () => {
+  it('sets octave to 0', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: 0 });
+    expect(s.octave).toBe(0);
+  });
+
+  it('sets octave to 1', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: 1 });
+    expect(s.octave).toBe(1);
+  });
+
+  it('sets octave to -1', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: -1 });
+    expect(s.octave).toBe(-1);
+  });
+
+  it('clamps above 2 to 2', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: 5 });
+    expect(s.octave).toBe(2);
+  });
+
+  it('clamps below -2 to -2', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: -5 });
+    expect(s.octave).toBe(-2);
+  });
+
+  it('works in any state', () => {
+    const wind = cw(initialWheelState, 36);
+    const s = wheelReducer(wind, { type: 'SET_OCTAVE', octave: -1 });
+    expect(s.octave).toBe(-1);
+  });
+});
+
 
 // ============================================================= full cycles
 

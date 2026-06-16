@@ -1,14 +1,22 @@
-import { type ElementType, type WindDirection } from './types';
+import { type ElementType, type WindDirection, ELEMENT_INTERVALS } from './types';
 
-// Map element types to frequencies in Hz (C pentatonic: C4 D4 E4 G4 A4)
-const ELEMENT_TO_FREQ: Record<ElementType, number> = {
-  earth: 261.63,  // C4
-  metal: 293.66,  // D4
-  wood:  329.63,  // E4
-  fire:  392.00,  // G4
-  water: 440.00,  // A4
-};
-
+// Compute element frequencies in Hz for a given key and octave
+// Preserves pentatonic intervals: root→M2→M3→P5→M6
+const C4 = 261.63;
+export function getElementFrequencies(key: string, octave: number): Record<ElementType, number> {
+  const KEY_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const semitoneFromC = KEY_NAMES.indexOf(key);
+  if (semitoneFromC < 0) {
+    // Fallback to C if invalid key
+    return getElementFrequencies('C', octave);
+  }
+  const rootFreq = C4 * 2 ** (semitoneFromC / 12 + octave);
+  const result = {} as Record<ElementType, number>;
+  for (const el of Object.keys(ELEMENT_INTERVALS) as ElementType[]) {
+    result[el] = rootFreq * 2 ** (ELEMENT_INTERVALS[el] / 12);
+  }
+  return result;
+}
 let audioCtx: AudioContext | null = null;
 
 export function getAudioContext(): AudioContext {
@@ -64,6 +72,8 @@ interface PlaybackConfig {
   bpm: number;
   direction: WindDirection;
   loop: boolean;
+  key: string;
+  octave: number;
 }
 
 interface PlaybackState {
@@ -103,7 +113,7 @@ export function startPlayback(
     ctx.resume();
   }
 
-  const { queuedSlotIndices, slots, bpm, direction, loop } = config;
+  const { queuedSlotIndices, slots, bpm, direction, loop, key, octave } = config;
   const indices = queuedSlotIndices;
   const N = indices.length;
   if (N === 0) {
@@ -115,11 +125,12 @@ export function startPlayback(
   const noteDuration = beatInterval * 0.6;
   const t0 = ctx.currentTime + 0.05; // 50ms lookahead
 
+  const freqMap = getElementFrequencies(key, octave);
   const oscillators: (OscillatorInfo | null)[] = [];
 
   // Schedule a single note at absolute beat index
   function scheduleNote(absoluteBeat: number, slotIndex: number, element: ElementType): void {
-    const freq = ELEMENT_TO_FREQ[element];
+    const freq = freqMap[element];
     if (freq == null) return;
 
     const startTime = t0 + absoluteBeat * beatInterval;
@@ -247,7 +258,7 @@ export function startPlayback(
         continue;
       }
 
-      const freq = ELEMENT_TO_FREQ[newElement];
+      const freq = freqMap[newElement];
       if (freq == null) {
         pb.oscillators[absBeat] = null;
         continue;

@@ -14,6 +14,8 @@ export interface WheelState {
   currentSlotAtHead: number | null;
   bpm: number;
   loop: boolean;
+  key: string;
+  octave: number;
 }
 
 export type WheelAction =
@@ -25,7 +27,9 @@ export type WheelAction =
   | { type: 'TACK' }
   | { type: 'COMPLETE' }
   | { type: 'SET_BPM'; bpm: number }
-  | { type: 'SET_LOOP'; loop: boolean };
+  | { type: 'SET_LOOP'; loop: boolean }
+  | { type: 'SET_KEY'; key: string }
+  | { type: 'SET_OCTAVE'; octave: number };
 
 export const ELEMENT_TO_NOTE: Record<ElementType, string> = {
   earth: 'C4',
@@ -49,6 +53,18 @@ export const ELEMENT_SYMBOLS: Record<ElementType, string> = {
   fire: '火',
   water: '水',
 };
+
+export const KEY_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const;
+
+// Semitone offsets from root preserving C pentatonic intervals
+export const ELEMENT_INTERVALS: Record<ElementType, number> = {
+  earth: 0,  // root (gōng 宫)
+  metal: 2,  // major 2nd (shāng 商)
+  wood:  4,  // major 3rd (jué 角)
+  fire:  7,  // perfect 5th (zhǐ 徵)
+  water: 9,  // major 6th (yǔ 羽)
+};
+
 export const SLOT_ANGLE_SPAN = 300 / 9;
 export const SLOT_START_ANGLE = 210;
 export const HEAD_ANGLE = 180;

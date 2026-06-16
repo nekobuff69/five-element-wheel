@@ -1,5 +1,5 @@
 import type { WheelState, WheelAction, WindDirection } from './types';
-import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE, HEAD_ANGLE } from './types';
+import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE, HEAD_ANGLE, KEY_NAMES } from './types';
 
 export const initialWheelState: WheelState = {
   mode: 'ready',
@@ -9,8 +9,10 @@ export const initialWheelState: WheelState = {
   direction: null,
   queuedSlotIndices: [],
   currentSlotAtHead: null,
-  bpm: 100,
+  bpm: 180,
   loop: true,
+  key: 'C',
+  octave: 0,
 };
 
 
@@ -182,7 +184,9 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
         selectedStone: state.selectedStone,
         bpm: state.bpm,
         loop: state.loop,
-      };
+        key: state.key,
+        octave: state.octave,
+    };
     }
 
     case 'SET_BPM': {
@@ -193,6 +197,16 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
     case 'SET_LOOP': {
       return { ...state, loop: action.loop };
     }
+    case 'SET_KEY': {
+      if (!KEY_NAMES.includes(action.key as typeof KEY_NAMES[number])) return state;
+      return { ...state, key: action.key };
+    }
+
+    case 'SET_OCTAVE': {
+      const octave = Math.max(-2, Math.min(2, action.octave));
+      return { ...state, octave };
+    }
+
 
     default:
       return state;

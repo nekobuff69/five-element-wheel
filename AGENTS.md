@@ -10,9 +10,9 @@ The triage state machine uses the default label vocabulary (`needs-triage`, `nee
 
 ### Domain docs
 
-- **`CONTEXT.md`** — ubiquitous language glossary: instrument anatomy (wheel, slot, head, stone, palette, ghost stone, snap target), elements and notes (Earth/C4, Metal/D4, Wood/E4, Fire/G4, Water/A4), wheel state machine (READY→WINDING→TACK→SPRING_BACK→COMPLETE), performance concepts (spring-back, loop, loop iteration, hot reload, queued slots, play order, beat grid, tack sound, early release, stone drag, snap).
+- **`CONTEXT.md`** — ubiquitous language glossary: instrument anatomy (wheel, slot, head, stone, palette, ghost stone, snap target), elements and notes (Earth/root, Metal/M2, Wood/M3, Fire/P5, Water/M6), wheel state machine (READY→WINDING→TACK→SPRING_BACK→COMPLETE), performance concepts (spring-back, loop, loop iteration, hot reload, key, octave, frequency computation, queued slots, play order, beat grid, tack sound, early release, stone drag, snap).
 - **`docs/adr/`** — architecture decision records:
-  - `0001-use-reducer-state-machine.md` — useReducer with pure reducer, 100 tests
+  - `0001-use-reducer-state-machine.md` — useReducer with pure reducer, 111 tests
   - `0002-css-transform-rotation.md` — CSS transforms for winding + spring-back
   - `0003-tonejs-transport-audio.md` — tone.js PluckSynth + Transport scheduling (superseded)
   - `0004-angular-pointer-drag.md` — pointer events with angular delta
@@ -31,7 +31,7 @@ The triage state machine uses the default label vocabulary (`needs-triage`, `nee
 - **Interaction**: Raw pointer events, angular-only drag for wheel, document-level listeners for stone drag
 - **Rotation**: CSS `transform: rotate()` with inline transition override for spring-back
 - **PWA**: `vite-plugin-pwa` with workbox `generateSW`, offline precache, iOS meta tags
-- **Testing**: Vitest + jsdom, 100 tests (`src/wheelReducer.test.ts`, `src/playback.test.ts`)
+- **Testing**: Vitest + jsdom, 111 tests (`src/wheelReducer.test.ts`, `src/playback.test.ts`)
 - **Package manager**: bun 1.3+
 
 ### File structure (flat)
@@ -39,19 +39,19 @@ The triage state machine uses the default label vocabulary (`needs-triage`, `nee
 ```
 src/
   main.tsx, App.tsx            — entry + root component
-  types.ts                     — ElementType, WheelState, WheelAction, geometry constants
-  wheelReducer.ts              — pure reducer + initialWheelState + helpers
-  wheelReducer.test.ts         — 77 unit tests (state machine + actions)
-  playback.ts                  — AudioContext, tack sound, rAF-synced playback, updateSlots for hot reload
-  playback.test.ts             — 23 unit tests (updateSlots behavior)
+  types.ts                     — ElementType, WheelState, WheelAction, geometry constants, KEY_NAMES, ELEMENT_INTERVALS
+  wheelReducer.ts              — pure reducer + initialWheelState + helpers (handles SET_KEY, SET_OCTAVE)
+  wheelReducer.test.ts         — 88 unit tests (state machine + actions + key/octave)
+  playback.ts                  — AudioContext, tack sound, rAF-synced playback, getElementFrequencies(), updateSlots for hot reload
+  playback.test.ts             — 23 unit tests (updateSlots behavior + frequencies)
   useWheelGesture.ts           — pointer-drag gesture hook (angular delta + threshold)
   geometry.ts                  — getSlotPosition() for snap detection
-  Wheel.tsx                    — orchestrator: gesture → dispatch → playback
+  Wheel.tsx                    — orchestrator: gesture → dispatch → playback (passes key/octave to startPlayback)
   Slot.tsx                     — empty/filled/glow/dim/snap-target states
   Head.tsx                     — fixed marker at 6 o'clock
   StonePalette.tsx             — 5 stone circles + Clear + stone drag gesture + ghost stone
   LoopToggle.tsx               — checkbox toggle for loop enabled/disabled
-  BPMControl.tsx               — range slider + "C Pentatonic"
+  BPMControl.tsx               — Key selector (12 notes) + Octave selector (-2..+2) + BPM slider (60-180)
   index.css                    — all styles
 ```
 
@@ -74,3 +74,7 @@ src/
 - Snap detection computes slot positions from `getSlotPosition()` in `geometry.ts`, rotated by current wheel rotation.
 - `PlaybackControl.updateSlots()` cancels future oscillators (beats ≥ currentBeat), re-schedules with new elements. Already-played beats unchanged.
 - Ghost stone fades out over 200ms on pointer up via CSS transition + setTimeout cleanup.
+- Key is stored as a 12-tone chromatic name (`C`, `C#`, …, `B`) in `state.key`. Pentatonic intervals preserved across all keys.
+- Octave is stored as an integer -2..+2 in `state.octave`. All frequencies multiplied by 2^octave.
+- Default BPM is 180, default key is 'C', default octave is 0.
+- `COMPLETE` preserves `state.key` and `state.octave` along with slots, selectedStone, BPM.

@@ -225,6 +225,41 @@ body {
   min-width: 50px;
   text-align: right;
 }
+.bpm-control__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bpm-control__select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+.bpm-control__select:focus {
+  border-color: var(--head-color);
+}
+
+.bpm-control__octave {
+  min-width: 44px;
+  text-align: center;
+}
+
+.bpm-control__octave--pos {
+  color: #6fcb6f;
+}
+
+.bpm-control__octave--neg {
+  color: #e57373;
+}
+
 
 /* ==============================
    Visual animations (Issue #9)

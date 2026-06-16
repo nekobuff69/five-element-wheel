@@ -125,7 +125,7 @@ describe('startPlayback updateSlots', () => {
     slotElements.forEach((el, i) => { slots[i] = el; });
 
     const control = startPlayback(
-      { queuedSlotIndices: queuedIndices, slots, bpm, direction: 'cw', loop: false },
+      { queuedSlotIndices: queuedIndices, slots, bpm, direction: 'cw', loop: false, key: 'C', octave: 0 },
       vi.fn(),
       vi.fn(),
     );
@@ -156,7 +156,7 @@ describe('startPlayback updateSlots', () => {
     // 8 original + 4 new = 12 total
     expect(createdOscillators.length).toBe(12);
     expect(createdOscillators[8].frequency.setValueAtTime).toHaveBeenCalledWith(
-      392.00,
+      expect.closeTo(392, 1),
       expect.any(Number),
     );
   });
@@ -179,14 +179,13 @@ describe('startPlayback updateSlots', () => {
     // All 8 beats updated: 8 stopped + 8 new = 16 total
     expect(createdOscillators.length).toBe(16);
 
-    // First replacement: fire (G4 = 392.00) at position 0
     expect(createdOscillators[8].frequency.setValueAtTime).toHaveBeenCalledWith(
-      392.00,
+      expect.closeTo(392, 1),
       expect.any(Number),
     );
     // Second replacement: earth (C4 = 261.63) at position 1
     expect(createdOscillators[9].frequency.setValueAtTime).toHaveBeenCalledWith(
-      261.63,
+      expect.closeTo(261.63, 2),
       expect.any(Number),
     );
   });
