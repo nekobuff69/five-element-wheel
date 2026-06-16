@@ -14,7 +14,6 @@ export interface WheelState {
   currentSlotAtHead: number | null;
   bpm: number;
   loop: boolean;
-  loopIteration: number;
 }
 
 export type WheelAction =

@@ -65,6 +65,7 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
         slots: state.slots,
         bpm: state.bpm,
         direction: state.direction,
+        loop: state.loop,
       },
       (idx) => setSpringBackPlayingIndex(idx),
       () => dispatch({ type: 'COMPLETE' })
@@ -74,7 +75,7 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
       control.cancel();
       playbackRef.current = null;
     };
-  }, [state.mode, state.queuedSlotIndices, state.bpm, state.direction, dispatch, state.loopIteration]);
+  }, [state.mode, state.queuedSlotIndices, state.bpm, state.direction, state.loop, dispatch]);
 
   useEffect(() => {
     if (state.mode !== 'springBack') return;

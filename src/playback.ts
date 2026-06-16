@@ -63,6 +63,7 @@ interface PlaybackConfig {
   slots: (ElementType | null)[];
   bpm: number;
   direction: WindDirection;
+  loop: boolean;
 }
 
 interface PlaybackState {
@@ -76,6 +77,8 @@ interface PlaybackState {
   cancelled: boolean;
   currentBeat: number;
   oscillators: (OscillatorInfo | null)[];
+  loop: boolean;
+  totalScheduledBeats: number;
 }
 interface OscillatorInfo {
   osc: OscillatorNode;
@@ -100,7 +103,7 @@ export function startPlayback(
     ctx.resume();
   }
 
-  const { queuedSlotIndices, slots, bpm, direction } = config;
+  const { queuedSlotIndices, slots, bpm, direction, loop } = config;
   const indices = queuedSlotIndices;
   const N = indices.length;
   if (N === 0) {
@@ -112,16 +115,14 @@ export function startPlayback(
   const noteDuration = beatInterval * 0.6;
   const t0 = ctx.currentTime + 0.05; // 50ms lookahead
 
-  const oscillators: (OscillatorInfo | null)[] = new Array(N).fill(null);
-  // Schedule audio notes
-  indices.forEach((slotIndex, i) => {
-    const element = slots[slotIndex];
-    if (!element) return;
+  const oscillators: (OscillatorInfo | null)[] = [];
 
+  // Schedule a single note at absolute beat index
+  function scheduleNote(absoluteBeat: number, slotIndex: number, element: ElementType): void {
     const freq = ELEMENT_TO_FREQ[element];
     if (freq == null) return;
 
-    const startTime = t0 + i * beatInterval;
+    const startTime = t0 + absoluteBeat * beatInterval;
     const endTime = startTime + noteDuration;
 
     const osc = ctx.createOscillator();
@@ -141,8 +142,30 @@ export function startPlayback(
       osc.disconnect();
       gain.disconnect();
     };
-    oscillators[i] = { osc, gain, slotIndex };
-  });
+
+    // Ensure oscillators array is large enough
+    while (oscillators.length <= absoluteBeat) {
+      oscillators.push(null);
+    }
+    oscillators[absoluteBeat] = { osc, gain, slotIndex };
+  }
+
+  // Schedule one iteration starting at the given beat offset
+  function scheduleIteration(startBeat: number): void {
+    for (let i = 0; i < N; i++) {
+      const slotIndex = indices[i];
+      const element = slots[slotIndex];
+      if (element) {
+        scheduleNote(startBeat + i, slotIndex, element);
+      }
+    }
+  }
+
+  // Schedule initial iterations (4 loops worth)
+  const INITIAL_ITERATIONS = 4;
+  for (let iter = 0; iter < INITIAL_ITERATIONS; iter++) {
+    scheduleIteration(iter * N);
+  }
 
   // rAF loop synced to AudioContext clock
   const pb: PlaybackState = {
@@ -156,6 +179,8 @@ export function startPlayback(
     cancelled: false,
     currentBeat: -1,
     oscillators,
+    loop,
+    totalScheduledBeats: INITIAL_ITERATIONS * N,
   };
 
   const tick = () => {
@@ -165,18 +190,26 @@ export function startPlayback(
     const currentBeat = Math.floor(elapsed / pb.beatInterval);
     pb.currentBeat = currentBeat;
 
-    const totalDuration = pb.count * pb.beatInterval;
-    if (elapsed >= totalDuration + pb.beatInterval * 0.5) {
+    // Extend scheduling if approaching the end (keep at least 1 iteration ahead)
+    if (pb.loop && currentBeat >= pb.totalScheduledBeats - pb.count) {
+      scheduleIteration(pb.totalScheduledBeats);
+      pb.totalScheduledBeats += pb.count;
+    }
+
+    // Completion logic: only complete when not looping, after first iteration
+    if (!pb.loop && currentBeat >= pb.count) {
       pb.completed = true;
       pb.rafId = null;
       onComplete();
       return;
     }
 
-    if (currentBeat >= 0 && currentBeat < pb.indices.length) {
-      const slotIdx = pb.indices[currentBeat];
+    // Report beat position within iteration for visual feedback
+    if (currentBeat >= 0) {
+      const positionInIteration = currentBeat % pb.count;
+      const slotIdx = pb.indices[positionInIteration];
       if (pb.slots[slotIdx] !== null) {
-        onBeat(currentBeat);
+        onBeat(positionInIteration);
       } else {
         onBeat(-1);
       }
@@ -187,20 +220,21 @@ export function startPlayback(
 
   pb.rafId = requestAnimationFrame(tick);
 
+
   function updateSlots(newSlots: (ElementType | null)[], currentBeat: number): void {
     if (pb.cancelled || pb.completed) return;
 
-    const startIdx = Math.max(0, Math.min(currentBeat, pb.count));
-
-    for (let i = startIdx; i < pb.count; i++) {
-      const slotIndex = pb.indices[i];
+    // Update all scheduled iterations from currentBeat onward
+    for (let absBeat = currentBeat; absBeat < pb.totalScheduledBeats; absBeat++) {
+      const positionInIteration = absBeat % pb.count;
+      const slotIndex = pb.indices[positionInIteration];
       const oldElement = pb.slots[slotIndex];
       const newElement = newSlots[slotIndex];
 
       if (oldElement === newElement) continue;
 
       // Cancel existing oscillator for this beat
-      const existing = pb.oscillators[i];
+      const existing = pb.oscillators[absBeat];
       if (existing) {
         existing.osc.onended = null;
         try { existing.osc.stop(); } catch {}
@@ -209,18 +243,18 @@ export function startPlayback(
       }
 
       if (!newElement) {
-        pb.oscillators[i] = null;
+        pb.oscillators[absBeat] = null;
         continue;
       }
 
       const freq = ELEMENT_TO_FREQ[newElement];
       if (freq == null) {
-        pb.oscillators[i] = null;
+        pb.oscillators[absBeat] = null;
         continue;
       }
 
       const noteDuration = pb.beatInterval * 0.6;
-      const baseTime = pb.t0 + i * pb.beatInterval;
+      const baseTime = pb.t0 + absBeat * pb.beatInterval;
       const startTime = Math.max(baseTime, ctx.currentTime + 0.01);
       const endTime = startTime + noteDuration;
 
@@ -242,11 +276,12 @@ export function startPlayback(
         gain.disconnect();
       };
 
-      pb.oscillators[i] = { osc, gain, slotIndex };
+      pb.oscillators[absBeat] = { osc, gain, slotIndex };
     }
 
     pb.slots = [...newSlots];
   }
+
 
   return {
     cancel: () => {

@@ -37,7 +37,6 @@ describe('initial state', () => {
     expect(initialWheelState.currentSlotAtHead).toBeNull();
     expect(initialWheelState.bpm).toBe(100);
     expect(initialWheelState.loop).toBe(true);
-    expect(initialWheelState.loopIteration).toBe(0);
   });
 });
 
@@ -444,11 +443,11 @@ describe('COMPLETE', () => {
     },
   );
 
-  it('COMPLETE with loop=true and queuedSlotIndices > 0 returns springBack', () => {
+  it('COMPLETE always resets to ready regardless of loop state', () => {
     const wind = cw(initialWheelState, 36);
     const released = wheelReducer(wind, { type: 'RELEASE' });
     const s = wheelReducer(released, { type: 'COMPLETE' });
-    expect(s.mode).toBe('springBack');
+    expect(s.mode).toBe('ready');
   });
 
   it('COMPLETE with loop=true resets rotation to 0', () => {
@@ -458,11 +457,11 @@ describe('COMPLETE', () => {
     const s = wheelReducer(released, { type: 'COMPLETE' });
     expect(s.rotation).toBe(0);
   });
-  it('COMPLETE with loop=true preserves queuedSlotIndices', () => {
+  it('COMPLETE clears queuedSlotIndices', () => {
     const wind = cw(cw(initialWheelState, 36), 36);
     const released = wheelReducer(wind, { type: 'RELEASE' });
     const s = wheelReducer(released, { type: 'COMPLETE' });
-    expect(s.queuedSlotIndices).toEqual([9, 8]);
+    expect(s.queuedSlotIndices).toEqual([]);
   });
 
   it('COMPLETE with loop=false returns ready', () => {
@@ -481,20 +480,6 @@ describe('COMPLETE', () => {
     expect(s.mode).toBe('ready');
   });
 
-  it('COMPLETE with loop=true increments loopIteration', () => {
-    const wind = cw(initialWheelState, 36);
-    const released = wheelReducer(wind, { type: 'RELEASE' });
-    const s = wheelReducer(released, { type: 'COMPLETE' });
-    expect(s.mode).toBe('springBack');
-    expect(s.loopIteration).toBe(1);
-  });
-
-  it('COMPLETE with loop=false resets loopIteration to 0', () => {
-    const state = createState({ mode: 'springBack', loop: false, loopIteration: 5, direction: 'cw' });
-    const s = wheelReducer(state, { type: 'COMPLETE' });
-    expect(s.mode).toBe('ready');
-    expect(s.loopIteration).toBe(0);
-  });
 });
 
 // ================================================================ SET_BPM

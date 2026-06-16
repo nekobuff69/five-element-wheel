@@ -125,7 +125,7 @@ describe('startPlayback updateSlots', () => {
     slotElements.forEach((el, i) => { slots[i] = el; });
 
     const control = startPlayback(
-      { queuedSlotIndices: queuedIndices, slots, bpm, direction: 'cw' },
+      { queuedSlotIndices: queuedIndices, slots, bpm, direction: 'cw', loop: false },
       vi.fn(),
       vi.fn(),
     );
@@ -136,9 +136,10 @@ describe('startPlayback updateSlots', () => {
 
   it('cancels future oscillators when updating slots', () => {
     // Beat 0: slot 0 = earth, Beat 1: slot 3 = metal
+    // With 4 iterations: 8 total beats scheduled (2 per iteration × 4)
     const control = startFresh(['earth', null, null, 'metal', null], [0, 3]);
 
-    // currentBeat=1: beat 0 already played, beat 1 is future
+    // currentBeat=1: beat 0 already played, beats 1-7 are future
     const newSlots: (ElementType | null)[] = Array(10).fill(null);
     newSlots[0] = 'earth'; // unchanged
     newSlots[3] = 'fire';  // changed
@@ -148,18 +149,21 @@ describe('startPlayback updateSlots', () => {
     // Beat 0 oscillator unchanged (element same → skipped)
     expect(createdOscillators[0].stop).not.toHaveBeenCalled();
 
-    // Beat 1 oscillator stopped
+    // Beat 1 oscillator stopped (first occurrence of position 1)
     expect(createdOscillators[1].stop).toHaveBeenCalled();
 
-    // New oscillator created for fire (G4 = 392.00)
-    expect(createdOscillators.length).toBe(3);
-    expect(createdOscillators[2].frequency.setValueAtTime).toHaveBeenCalledWith(
+    // 4 new oscillators created for fire (beats 1,3,5,7 all at position 1)
+    // 8 original + 4 new = 12 total
+    expect(createdOscillators.length).toBe(12);
+    expect(createdOscillators[8].frequency.setValueAtTime).toHaveBeenCalledWith(
       392.00,
       expect.any(Number),
     );
   });
 
+
   it('re-schedules all beats when currentBeat is 0', () => {
+    // With 4 iterations: 8 total beats scheduled
     const control = startFresh(['wood', null, null, 'water', null], [0, 3]);
 
     const newSlots: (ElementType | null)[] = Array(10).fill(null);
@@ -168,20 +172,20 @@ describe('startPlayback updateSlots', () => {
 
     control.updateSlots(newSlots, 0);
 
-    // Both original oscillators stopped
+    // Both original oscillators stopped (first occurrence of each position)
     expect(createdOscillators[0].stop).toHaveBeenCalled();
     expect(createdOscillators[1].stop).toHaveBeenCalled();
 
-    // Two new oscillators created
-    expect(createdOscillators.length).toBe(4);
+    // All 8 beats updated: 8 stopped + 8 new = 16 total
+    expect(createdOscillators.length).toBe(16);
 
-    // First replacement: fire (G4 = 392.00)
-    expect(createdOscillators[2].frequency.setValueAtTime).toHaveBeenCalledWith(
+    // First replacement: fire (G4 = 392.00) at position 0
+    expect(createdOscillators[8].frequency.setValueAtTime).toHaveBeenCalledWith(
       392.00,
       expect.any(Number),
     );
-    // Second replacement: earth (C4 = 261.63)
-    expect(createdOscillators[3].frequency.setValueAtTime).toHaveBeenCalledWith(
+    // Second replacement: earth (C4 = 261.63) at position 1
+    expect(createdOscillators[9].frequency.setValueAtTime).toHaveBeenCalledWith(
       261.63,
       expect.any(Number),
     );
@@ -189,35 +193,39 @@ describe('startPlayback updateSlots', () => {
 
   it('does not touch oscillators for already-played beats', () => {
     // Beat 0: slot 0 = earth, Beat 1: slot 1 = metal
+    // With 4 iterations: 8 total beats scheduled
     const control = startFresh(['earth', 'metal', null, null, null], [0, 1]);
 
     const newSlots: (ElementType | null)[] = Array(10).fill(null);
-    newSlots[0] = 'fire';  // changed, but already played
-    newSlots[1] = 'earth'; // changed, future
+    newSlots[0] = 'fire';  // changed
+    newSlots[1] = 'earth'; // changed
 
     control.updateSlots(newSlots, 1);
 
-    // Beat 0 oscillator NOT stopped (already played)
+    // Beat 0 oscillator NOT stopped (absBeat < currentBeat)
     expect(createdOscillators[0].stop).not.toHaveBeenCalled();
 
     // Beat 1 oscillator stopped and replaced
     expect(createdOscillators[1].stop).toHaveBeenCalled();
-    expect(createdOscillators.length).toBe(3);
+    // 7 beats updated (1-7), 7 stopped + 7 new = 15 total
+    expect(createdOscillators.length).toBe(15);
   });
 
-  it('is no-op when currentBeat equals or exceeds beat count', () => {
+
+  it('is no-op when currentBeat equals or exceeds totalScheduledBeats', () => {
     const control = startFresh(['earth', 'metal', null, null, null], [0, 1]);
     const initialCount = createdOscillators.length;
 
-    // currentBeat = 2 >= count = 2 → nothing to update
+    // currentBeat = 8 >= totalScheduledBeats = 8 → nothing to update
     const newSlots: (ElementType | null)[] = Array(10).fill(null);
     newSlots[0] = 'fire';
-    control.updateSlots(newSlots, 2);
+    control.updateSlots(newSlots, 8);
 
     expect(createdOscillators.length).toBe(initialCount);
     expect(createdOscillators[0].stop).not.toHaveBeenCalled();
     expect(createdOscillators[1].stop).not.toHaveBeenCalled();
   });
+
 
   it('skips re-schedule when element has not changed', () => {
     const control = startFresh(['earth', null, null, null, null], [0]);
@@ -234,6 +242,7 @@ describe('startPlayback updateSlots', () => {
 
   it('handles clearing a slot to null during playback', () => {
     // Beat 0: slot 0 = earth, Beat 1: slot 1 = metal
+    // With 4 iterations: 8 total beats scheduled
     const control = startFresh(['earth', 'metal', null, null, null], [0, 1]);
 
     // Clear slot 1 (metal → null), keep slot 0 (earth)
@@ -242,13 +251,13 @@ describe('startPlayback updateSlots', () => {
 
     control.updateSlots(clearedSlots, 1);
 
-    // Beat 0 unchanged (already played)
+    // Beat 0 unchanged (absBeat < currentBeat)
     expect(createdOscillators[0].stop).not.toHaveBeenCalled();
 
     // Beat 1 oscillator stopped and NOT replaced (null)
     expect(createdOscillators[1].stop).toHaveBeenCalled();
 
-    // No new oscillators created (only the 2 originals)
-    expect(createdOscillators.length).toBe(2);
+    // 4 oscillators stopped (beats 1,3,5,7 at position 1), 0 new = 8 total
+    expect(createdOscillators.length).toBe(8);
   });
 });
