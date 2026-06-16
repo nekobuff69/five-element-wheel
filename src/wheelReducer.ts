@@ -114,16 +114,18 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
       // Compute prevSlot and newSlot with direction bias:
       // CW → floor favours slot 9 (right of head, approaches first)
       // CCW → round favours slot 0 (left of head, approaches first)
-      const prevSlot = getSlotAtHead(state.rotation, direction, effectiveQueued, false)!;
+      // When transitioning from springBack, reset rotation to 0 (CSS already animated to 0°)
+      const baseRotation = state.mode === 'springBack' ? 0 : state.rotation;
+      const prevSlot = getSlotAtHead(baseRotation, direction, effectiveQueued, false)!;
 
       // Accumulate rotation, cap at ±360
-      let newRotation = state.rotation + action.delta;
+      let newRotation = baseRotation + action.delta;
       if (newRotation > 360) newRotation = 360;
       if (newRotation < -360) newRotation = -360;
 
       const newSlot = getSlotAtHead(newRotation, direction, effectiveQueued, false)!;
-      const step = newRotation > state.rotation ? -1 : 1;
-      const newlyCrossed = collectCrossings(prevSlot, newSlot, state.rotation, newRotation, step, effectiveQueued);
+      const step = newRotation > baseRotation ? -1 : 1;
+      const newlyCrossed = collectCrossings(prevSlot, newSlot, baseRotation, newRotation, step, effectiveQueued);
       const queued = [...effectiveQueued, ...newlyCrossed];
 
       // For visual feedback, exclude already-queued slots so glow moves to next approaching slot
