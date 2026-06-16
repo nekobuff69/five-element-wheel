@@ -74,13 +74,27 @@ interface PlaybackState {
   rafId: number | null;
   completed: boolean;
   cancelled: boolean;
+  currentBeat: number;
+  oscillators: (OscillatorInfo | null)[];
+}
+interface OscillatorInfo {
+  osc: OscillatorNode;
+  gain: GainNode;
+  slotIndex: number;
+}
+
+export interface PlaybackControl {
+  cancel: () => void;
+  updateSlots: (newSlots: (ElementType | null)[], currentBeat: number) => void;
+  t0: number;
+  beatInterval: number;
 }
 
 export function startPlayback(
   config: PlaybackConfig,
   onBeat: (queueIndex: number) => void,
   onComplete: () => void
-): () => void {
+): PlaybackControl {
   const ctx = getAudioContext();
   if (ctx.state === 'suspended') {
     ctx.resume();
@@ -91,13 +105,14 @@ export function startPlayback(
   const N = indices.length;
   if (N === 0) {
     onComplete();
-    return () => {};
+    return { cancel: () => {}, updateSlots: () => {}, t0: 0, beatInterval: 0 };
   }
 
   const beatInterval = 60 / bpm;
   const noteDuration = beatInterval * 0.6;
   const t0 = ctx.currentTime + 0.05; // 50ms lookahead
 
+  const oscillators: (OscillatorInfo | null)[] = new Array(N).fill(null);
   // Schedule audio notes
   indices.forEach((slotIndex, i) => {
     const element = slots[slotIndex];
@@ -126,6 +141,7 @@ export function startPlayback(
       osc.disconnect();
       gain.disconnect();
     };
+    oscillators[i] = { osc, gain, slotIndex };
   });
 
   // rAF loop synced to AudioContext clock
@@ -138,6 +154,8 @@ export function startPlayback(
     rafId: null,
     completed: false,
     cancelled: false,
+    currentBeat: -1,
+    oscillators,
   };
 
   const tick = () => {
@@ -145,6 +163,7 @@ export function startPlayback(
 
     const elapsed = ctx.currentTime - pb.t0;
     const currentBeat = Math.floor(elapsed / pb.beatInterval);
+    pb.currentBeat = currentBeat;
 
     const totalDuration = pb.count * pb.beatInterval;
     if (elapsed >= totalDuration + pb.beatInterval * 0.5) {
@@ -168,11 +187,84 @@ export function startPlayback(
 
   pb.rafId = requestAnimationFrame(tick);
 
-  return () => {
-    pb.cancelled = true;
-    if (pb.rafId !== null) {
-      cancelAnimationFrame(pb.rafId);
-      pb.rafId = null;
+  function updateSlots(newSlots: (ElementType | null)[], currentBeat: number): void {
+    if (pb.cancelled || pb.completed) return;
+
+    const startIdx = Math.max(0, Math.min(currentBeat, pb.count));
+
+    for (let i = startIdx; i < pb.count; i++) {
+      const slotIndex = pb.indices[i];
+      const oldElement = pb.slots[slotIndex];
+      const newElement = newSlots[slotIndex];
+
+      if (oldElement === newElement) continue;
+
+      // Cancel existing oscillator for this beat
+      const existing = pb.oscillators[i];
+      if (existing) {
+        existing.osc.onended = null;
+        try { existing.osc.stop(); } catch {}
+        try { existing.osc.disconnect(); } catch {}
+        try { existing.gain.disconnect(); } catch {}
+      }
+
+      if (!newElement) {
+        pb.oscillators[i] = null;
+        continue;
+      }
+
+      const freq = ELEMENT_TO_FREQ[newElement];
+      if (freq == null) {
+        pb.oscillators[i] = null;
+        continue;
+      }
+
+      const noteDuration = pb.beatInterval * 0.6;
+      const startTime = pb.t0 + i * pb.beatInterval;
+      const endTime = startTime + noteDuration;
+
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0, pb.t0);
+      gain.gain.linearRampToValueAtTime(0.4, startTime + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.001, endTime);
+
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(endTime);
+
+      osc.onended = () => {
+        osc.disconnect();
+        gain.disconnect();
+      };
+
+      pb.oscillators[i] = { osc, gain, slotIndex };
     }
+
+    pb.slots = [...newSlots];
+  }
+
+  return {
+    cancel: () => {
+      pb.cancelled = true;
+      if (pb.rafId !== null) {
+        cancelAnimationFrame(pb.rafId);
+        pb.rafId = null;
+      }
+      for (const info of pb.oscillators) {
+        if (info) {
+          info.osc.onended = null;
+          try { info.osc.stop(); } catch {}
+          try { info.osc.disconnect(); } catch {}
+          try { info.gain.disconnect(); } catch {}
+        }
+      }
+    },
+    updateSlots,
+    t0,
+    beatInterval,
   };
 }

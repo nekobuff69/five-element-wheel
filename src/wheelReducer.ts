@@ -95,15 +95,18 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
     }
 
     case 'CLEAR_ALL': {
-      if (state.mode !== 'ready') return state;
-      return { ...state, slots: Array(10).fill(null) };
+      return { ...state, slots: Array(10).fill(null), queuedSlotIndices: [], mode: 'ready' };
     }
 
     case 'WIND': {
-      if (state.mode !== 'ready' && state.mode !== 'winding') return state;
+      if (state.mode !== 'ready' && state.mode !== 'winding' && state.mode !== 'springBack') return state;
+
+      // When interrupting springBack, reset for a fresh wind cycle
+      const effectiveQueued = state.mode === 'springBack' ? [] : state.queuedSlotIndices;
+      const effectiveDirection = state.mode === 'springBack' ? null : state.direction;
 
       // Determine direction from first meaningful delta
-      let direction: WindDirection | null = state.direction;
+      let direction: WindDirection | null = effectiveDirection;
       if (direction === null && action.delta !== 0) {
         direction = action.delta > 0 ? 'cw' : 'ccw';
       }
@@ -120,8 +123,8 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
 
       const newSlot = getSlotAtHead(newRotation, direction);
       const step = newRotation > state.rotation ? -1 : 1;
-      const newlyCrossed = collectCrossings(prevSlot, newSlot, state.rotation, newRotation, step, state.queuedSlotIndices);
-      const queued = [...state.queuedSlotIndices, ...newlyCrossed];
+      const newlyCrossed = collectCrossings(prevSlot, newSlot, state.rotation, newRotation, step, effectiveQueued);
+      const queued = [...effectiveQueued, ...newlyCrossed];
 
       return {
         ...state,

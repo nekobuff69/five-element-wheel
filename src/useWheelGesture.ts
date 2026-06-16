@@ -35,7 +35,7 @@ export function useWheelGesture(
   const handlePointerDown = useCallback((e: PointerEvent) => {
     const container = wheelRef.current;
     if (!container) return;
-    if (modeRef.current !== 'ready' && modeRef.current !== 'winding') return;
+    if (modeRef.current !== 'ready' && modeRef.current !== 'winding' && modeRef.current !== 'springBack') return;
     container.setPointerCapture(e.pointerId);
     const rect = container.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
@@ -48,7 +48,7 @@ export function useWheelGesture(
 
   const handlePointerMove = useCallback((e: PointerEvent) => {
     if (!isDraggingRef.current || lastAngleRef.current === null) return;
-    if (modeRef.current !== 'ready' && modeRef.current !== 'winding') return;
+    if (modeRef.current !== 'ready' && modeRef.current !== 'winding' && modeRef.current !== 'springBack') return;
     const container = wheelRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();

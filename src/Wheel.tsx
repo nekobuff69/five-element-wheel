@@ -3,7 +3,7 @@ import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE, SLOT_ORBIT_RADIUS } from './types';
 import Slot from './Slot';
 import Head from './Head';
 import { useEffect, useRef, useState } from 'react';
-import { playTackSound, startPlayback } from './playback';
+import { playTackSound, startPlayback, type PlaybackControl, getAudioContext } from './playback';
 import { useWheelGesture } from './useWheelGesture';
 interface WheelProps {
   state: WheelState;
@@ -26,6 +26,7 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
   const playbackIndices = state.queuedSlotIndices;
   const wheelRef = useRef<HTMLDivElement>(null!);
   const prevModeRef = useRef(state.mode);
+  const playbackRef = useRef<PlaybackControl | null>(null);
 
 
 
@@ -58,7 +59,7 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
       dispatch({ type: 'COMPLETE' });
       return;
     }
-    const cancel = startPlayback(
+    const control = startPlayback(
       {
         queuedSlotIndices: state.queuedSlotIndices,
         slots: state.slots,
@@ -68,8 +69,24 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
       (idx) => setSpringBackPlayingIndex(idx),
       () => dispatch({ type: 'COMPLETE' })
     );
-    return cancel;
-  }, [state.mode, state.queuedSlotIndices, state.slots, state.bpm, state.direction, dispatch]);
+    playbackRef.current = control;
+    return () => {
+      control.cancel();
+      playbackRef.current = null;
+    };
+  }, [state.mode, state.queuedSlotIndices, state.bpm, state.direction, dispatch]);
+
+  useEffect(() => {
+    if (state.mode !== 'springBack') return;
+    if (!playbackRef.current) return;
+
+    const control = playbackRef.current;
+    const ctx = getAudioContext();
+    const elapsed = ctx.currentTime - control.t0;
+    const currentBeat = Math.floor(elapsed / control.beatInterval);
+
+    control.updateSlots(state.slots, currentBeat);
+  }, [state.mode, state.slots]);
 
 
   function getWheelStyle(): React.CSSProperties {

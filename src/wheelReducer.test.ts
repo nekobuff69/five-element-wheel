@@ -125,9 +125,39 @@ describe('CLEAR_ALL', () => {
     expect(cleared.slots.every((x) => x === null)).toBe(true);
   });
 
-  it('is no-op in winding mode', () => {
-    const wind = cw(initialWheelState);
-    expect(wheelReducer(wind, { type: 'CLEAR_ALL' })).toBe(wind);
+  it('resets to ready with empty slots when mode is winding', () => {
+    let s = select(initialWheelState, 'earth');
+    s = place(s, 0);
+    s = cw(s);
+    const cleared = wheelReducer(s, { type: 'CLEAR_ALL' });
+    expect(cleared.mode).toBe('ready');
+    expect(cleared.slots.every((x) => x === null)).toBe(true);
+  });
+
+  it('resets to ready with empty slots when mode is springBack', () => {
+    let s = select(initialWheelState, 'earth');
+    s = place(s, 0);
+    s = cw(s);
+    s = wheelReducer(s, { type: 'RELEASE' });
+    const cleared = wheelReducer(s, { type: 'CLEAR_ALL' });
+    expect(cleared.mode).toBe('ready');
+    expect(cleared.slots.every((x) => x === null)).toBe(true);
+  });
+
+  it('clears queuedSlotIndices to []', () => {
+    let s = cw(initialWheelState);
+    s = cw(s);
+    expect(s.queuedSlotIndices.length).toBeGreaterThan(0);
+    const cleared = wheelReducer(s, { type: 'CLEAR_ALL' });
+    expect(cleared.queuedSlotIndices).toEqual([]);
+  });
+
+  it('still works in ready mode', () => {
+    let s = select(initialWheelState, 'water');
+    s = place(s, 3);
+    const cleared = wheelReducer(s, { type: 'CLEAR_ALL' });
+    expect(cleared.mode).toBe('ready');
+    expect(cleared.slots.every((x) => x === null)).toBe(true);
   });
 });
 
@@ -184,9 +214,32 @@ describe('WIND', () => {
     expect(s.rotation).toBe(-360);
   });
 
-  it('ignores WIND in springBack mode', () => {
-    const springing = createState({ mode: 'springBack' });
-    expect(wheelReducer(springing, { type: 'WIND', delta: 36 })).toBe(springing);
+  it('WIND from springBack transitions to winding', () => {
+    const springing = createState({ mode: 'springBack', direction: 'cw', rotation: -10 });
+    const s = wheelReducer(springing, { type: 'WIND', delta: 36 });
+    expect(s.mode).toBe('winding');
+  });
+
+  it('WIND from springBack preserves existing slots', () => {
+    const springing = createState({
+      mode: 'springBack',
+      direction: 'cw',
+      rotation: -10,
+      slots: ['earth', null, null, null, null, null, null, null, null, null],
+    });
+    const s = wheelReducer(springing, { type: 'WIND', delta: 36 });
+    expect(s.slots[0]).toBe('earth');
+  });
+
+  it('WIND from springBack resets queuedSlotIndices', () => {
+    const springing = createState({
+      mode: 'springBack',
+      direction: 'cw',
+      rotation: 0,
+      queuedSlotIndices: [9, 8, 7],
+    });
+    const s = wheelReducer(springing, { type: 'WIND', delta: 10 });
+    expect(s.queuedSlotIndices).toEqual([]);
   });
 
 });
