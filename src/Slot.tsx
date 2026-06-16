@@ -4,7 +4,6 @@ import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
 interface SlotProps {
   index: number;
   element: ElementType | null;
-  isAtHead: boolean;
   isQueued: boolean;
   counterRotation: number;
   onClick?: () => void;
@@ -16,13 +15,12 @@ interface SlotProps {
   isDraggedAway?: boolean;
 }
 
-function Slot({ index, element, isAtHead, isQueued, counterRotation, onClick, onPointerDown, mode, isDimmed, isCurrentlyPlaying, isSnapTarget, isDraggedAway }: SlotProps) {
+function Slot({ index, element, isQueued, counterRotation, onClick, onPointerDown, mode, isDimmed, isCurrentlyPlaying, isSnapTarget, isDraggedAway }: SlotProps) {
   const displayElement = isDraggedAway ? null : element;
   const className = [
     'slot',
     displayElement ? 'slot--filled' : 'slot--empty',
     isQueued ? 'slot--queued' : '',
-    isAtHead && !isQueued && displayElement && mode === 'winding' ? 'slot--approaching' : '',
     isSnapTarget ? 'slot--glow' : '',
     isCurrentlyPlaying ? 'slot--playing' : '',
     isDimmed ? 'slot--dimmed' : '',

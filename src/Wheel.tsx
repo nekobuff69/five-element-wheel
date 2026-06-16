@@ -110,7 +110,6 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
               <Slot
                 index={i}
                 element={state.slots[i]}
-                isAtHead={state.currentSlotAtHead === i}
                 isQueued={playbackIndices.includes(i)}
                 counterRotation={counterRotation}
                 onClick={() => {
