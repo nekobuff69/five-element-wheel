@@ -220,7 +220,8 @@ export function startPlayback(
       }
 
       const noteDuration = pb.beatInterval * 0.6;
-      const startTime = pb.t0 + i * pb.beatInterval;
+      const baseTime = pb.t0 + i * pb.beatInterval;
+      const startTime = Math.max(baseTime, ctx.currentTime + 0.01);
       const endTime = startTime + noteDuration;
 
       const osc = ctx.createOscillator();
