@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ElementType, WheelMode } from './types';
-import { ELEMENT_COLORS, ELEMENT_SYMBOLS, SLOT_ORBIT_RADIUS } from './types';
+import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
+import { SLOT_ORBIT_RADIUS, findSnapTarget } from './geometry';
 import type { WheelAction } from './types';
-import { getSlotPosition } from './geometry';
 
 const ELEMENTS: ElementType[] = ['earth', 'metal', 'wood', 'fire', 'water'];
 const SLOT_COUNT = 10;
@@ -58,34 +58,21 @@ function StonePalette({ selectedStone, onSelectStone, onClear, dispatch, wheelRo
         const rect = wheelEl.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
-        const Rrad = (wheelRotationRef.current * Math.PI) / 180;
-        const cosR = Math.cos(Rrad);
-        const sinR = Math.sin(Rrad);
 
-        let nearestDist = Infinity;
-        let nearestIdx: number | null = null;
-        let nearestPos = { x: 0, y: 0 };
+        const snap = findSnapTarget(
+          cursorX, cursorY,
+          cx, cy,
+          wheelRotationRef.current,
+          SLOT_COUNT,
+          SNAP_THRESHOLD_PX,
+          SLOT_ORBIT_RADIUS
+        );
 
-        for (let i = 0; i < SLOT_COUNT; i++) {
-          const base = getSlotPosition(i, 0, 0, SLOT_ORBIT_RADIUS);
-          const dx = base.x * cosR - base.y * sinR;
-          const dy = base.x * sinR + base.y * cosR;
-          const slotX = cx + dx;
-          const slotY = cy + dy;
-
-          const dist = Math.hypot(slotX - cursorX, slotY - cursorY);
-          if (dist < nearestDist) {
-            nearestDist = dist;
-            nearestIdx = i;
-            nearestPos = { x: slotX, y: slotY };
-          }
-        }
-
-        if (nearestIdx !== null && nearestDist <= SNAP_THRESHOLD_PX) {
-          setGhostPosition(nearestPos);
-          setSnapTargetSlot(nearestIdx);
-          snapTargetSlotRef.current = nearestIdx;
-          onSnapTargetChangeRef.current(nearestIdx);
+        if (snap) {
+          setGhostPosition({ x: snap.x, y: snap.y });
+          setSnapTargetSlot(snap.slotIndex);
+          snapTargetSlotRef.current = snap.slotIndex;
+          onSnapTargetChangeRef.current(snap.slotIndex);
           return;
         }
       }

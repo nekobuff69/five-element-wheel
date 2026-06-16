@@ -31,13 +31,6 @@ export type WheelAction =
   | { type: 'SET_KEY'; key: string }
   | { type: 'SET_OCTAVE'; octave: number };
 
-export const ELEMENT_TO_NOTE: Record<ElementType, string> = {
-  earth: 'C4',
-  metal: 'D4',
-  wood: 'E4',
-  fire: 'G4',
-  water: 'A4',
-};
 
 export const ELEMENT_COLORS: Record<ElementType, string> = {
   earth: '#8B6914',
@@ -65,8 +58,3 @@ export const ELEMENT_INTERVALS: Record<ElementType, number> = {
   water: 9,  // major 6th (yǔ 羽)
 };
 
-export const SLOT_ANGLE_SPAN = 300 / 9;
-export const SLOT_START_ANGLE = 210;
-export const HEAD_ANGLE = 180;
-
-export const SLOT_ORBIT_RADIUS = 122;

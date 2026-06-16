@@ -1,22 +1,6 @@
-import { type ElementType, type WindDirection, ELEMENT_INTERVALS } from './types';
+import { type ElementType, type WindDirection } from './types';
+import { getElementFrequencies } from './frequencies';
 
-// Compute element frequencies in Hz for a given key and octave
-// Preserves pentatonic intervals: root→M2→M3→P5→M6
-const C4 = 261.63;
-export function getElementFrequencies(key: string, octave: number): Record<ElementType, number> {
-  const KEY_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-  const semitoneFromC = KEY_NAMES.indexOf(key);
-  if (semitoneFromC < 0) {
-    // Fallback to C if invalid key
-    return getElementFrequencies('C', octave);
-  }
-  const rootFreq = C4 * 2 ** (semitoneFromC / 12 + (octave - 4));
-  const result = {} as Record<ElementType, number>;
-  for (const el of Object.keys(ELEMENT_INTERVALS) as ElementType[]) {
-    result[el] = rootFreq * 2 ** (ELEMENT_INTERVALS[el] / 12);
-  }
-  return result;
-}
 let audioCtx: AudioContext | null = null;
 
 export function getAudioContext(): AudioContext {

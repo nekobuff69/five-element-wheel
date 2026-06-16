@@ -1,5 +1,6 @@
 import type { WheelState, WheelAction, WindDirection } from './types';
-import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE, HEAD_ANGLE, KEY_NAMES } from './types';
+import { KEY_NAMES } from './types';
+import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE, HEAD_ANGLE } from './geometry';
 
 export const initialWheelState: WheelState = {
   mode: 'ready',
