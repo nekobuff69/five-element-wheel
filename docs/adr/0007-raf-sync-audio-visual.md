@@ -68,3 +68,7 @@ The index now means "position in the encounter-order array" (`state.queuedSlotIn
 - **Positive**: Self-termination + `cancelAnimationFrame` cleanup = no leaked rAF loops.
 - **Negative**: rAF loop creates React state updates on every frame during playback (60fps × ~10 beats = ~10 actual updates, since `springBackPlayingIndex` only changes on beat boundaries). Negligible at 10 slots.
 - **Negative**: If the tab is backgrounded during playback, rAF stops. Audio continues (scheduled on hardware clock), visual resumes when tab is foregrounded. User may see a visual jump to the current beat.
+
+### 7. Loop iteration restart
+
+When loop is enabled, `COMPLETE` returns `mode: 'springBack'` (same mode) with incremented `loopIteration`. The useEffect dependency array includes `state.loopIteration`, so it re-runs on each loop iteration, calling `startPlayback()` again with a fresh `slots` snapshot. This enables hot reload — each iteration reads current state, not a stale closure.

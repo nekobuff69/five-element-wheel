@@ -22,7 +22,7 @@ Replace Tone.js with native Web Audio API for all spring-back playback:
 
 4. **Tack sound**: Unchanged — already used native Web Audio API.
 
-5. **State management**: `PlaybackState` replaces the React `playbackRef` for tracking playback lifetime. Native nodes self-clean via `onended`; no explicit stop API is needed.
+5. **State management**: `PlaybackState` replaces the React `playbackRef` for tracking playback lifetime. Native nodes self-clean via `onended`. `PlaybackControl` interface exposes `cancel()`, `updateSlots()`, `t0`, and `beatInterval` for external coordination (loop restart, hot reload).
 
 6. **Frequency map**: `ELEMENT_TO_FREQ` (in `playback.ts`) records Hz values directly (C4=261.63, D4=293.66, E4=329.63, G4=392.00, A4=440.00), replacing the note-name-based `ELEMENT_TO_NOTE` from `types.ts`.
 
@@ -43,3 +43,4 @@ Replace Tone.js with native Web Audio API for all spring-back playback:
 - **Negative**: Triangle-wave oscillators sound simpler than Karplus-Strong PluckSynth. Acceptable for MVP; richer timbres can be added later via `PeriodicWave` or `AudioBufferSourceNode` samples without reintroducing a framework.
 - **Positive**: Unified audio-visual clock — `playback.ts` also owns the rAF-based visual sync loop (see ADR-0007), making it the single source of truth for all playback timing.
 - **Negative**: No Transport abstraction for complex sequencing. For the current use case (N evenly-spaced notes), `currentTime + offset` is sufficient. If sequencing needs grow (swing, tempo curves, looping), a scheduler abstraction should be revisited.
+- **Positive**: `PlaybackControl.updateSlots()` enables hot reload of stone edits during loop playback — cancels future oscillators, re-schedules with new elements (see ADR-0008).
