@@ -113,6 +113,27 @@ describe('PLACE_STONE', () => {
     expect(wheelReducer(initialWheelState, { type: 'PLACE_STONE', slotIndex: 0 })).toBe(initialWheelState);
   });
 });
+  it('places stone in springBack mode (loop playback)', () => {
+    const s = wheelReducer(
+      createState({ mode: 'springBack', direction: 'cw', selectedStone: 'fire' }),
+      { type: 'PLACE_STONE', slotIndex: 5 },
+    );
+    expect(s.slots[5]).toBe('fire');
+  });
+
+  it('rejects placement in winding mode', () => {
+    const wind = cw(select(initialWheelState, 'earth'), 36);
+    expect(wind.mode).toBe('winding');
+    const s = wheelReducer(wind, { type: 'PLACE_STONE', slotIndex: 3 });
+    expect(s).toBe(wind);
+  });
+
+  it('rejects placement in tack mode', () => {
+    const tacked = wheelReducer(cw(select(initialWheelState, 'earth'), 36), { type: 'TACK' });
+    expect(tacked.mode).toBe('tack');
+    const s = wheelReducer(tacked, { type: 'PLACE_STONE', slotIndex: 3 });
+    expect(s).toBe(tacked);
+  });
 
 // =============================================================== CLEAR_ALL
 
