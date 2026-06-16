@@ -152,6 +152,9 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
 
     case 'COMPLETE': {
       if (state.mode !== 'springBack') return state;
+      if (state.loop && state.queuedSlotIndices.length > 0) {
+        return { ...state, mode: 'springBack' };
+      }
       return {
         ...initialWheelState,
         slots: state.slots,

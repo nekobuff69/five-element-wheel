@@ -1,4 +1,4 @@
-import { useReducer } from 'react';
+import { useReducer, useState } from 'react';
 import { wheelReducer, initialWheelState } from './wheelReducer';
 import Wheel from './Wheel';
 import StonePalette from './StonePalette';
@@ -7,6 +7,7 @@ import LoopToggle from './LoopToggle';
 
 function App() {
   const [state, dispatch] = useReducer(wheelReducer, initialWheelState);
+  const [snapTargetSlot, setSnapTargetSlot] = useState<number | null>(null);
 
   return (
     <div className="app">
@@ -19,6 +20,9 @@ function App() {
           dispatch({ type: 'CLEAR_ALL' });
         }}
         dispatch={dispatch}
+        wheelRotation={state.rotation}
+        wheelMode={state.mode}
+        onSnapTargetChange={setSnapTargetSlot}
       />
       <BPMControl
         bpm={state.bpm}
@@ -28,7 +32,7 @@ function App() {
         loop={state.loop}
         onToggle={(loop) => dispatch({ type: 'SET_LOOP', loop })}
       />
-      <Wheel state={state} dispatch={dispatch} />
+      <Wheel state={state} dispatch={dispatch} snapTargetSlot={snapTargetSlot} />
     </div>
   );
 }

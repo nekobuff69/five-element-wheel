@@ -329,28 +329,31 @@ describe('TACK', () => {
 // =============================================================== COMPLETE
 
 describe('COMPLETE', () => {
-  it('transitions springBack to ready', () => {
+  it('transitions springBack to ready (loop=false)', () => {
     const released = wheelReducer(cw(initialWheelState, 36), { type: 'RELEASE' });
-    const s = wheelReducer(released, { type: 'COMPLETE' });
+    const noLoop = wheelReducer(released, { type: 'SET_LOOP', loop: false });
+    const s = wheelReducer(noLoop, { type: 'COMPLETE' });
     expect(s.mode).toBe('ready');
   });
 
-  it('resets rotation, direction, queuedSlotIndices, currentSlotAtHead', () => {
+  it('resets rotation, direction, queuedSlotIndices, currentSlotAtHead (loop=false)', () => {
     const wind = cw(cw(initialWheelState, 36), 36);
     const released = wheelReducer(wind, { type: 'RELEASE' });
-    const s = wheelReducer(released, { type: 'COMPLETE' });
+    const noLoop = wheelReducer(released, { type: 'SET_LOOP', loop: false });
+    const s = wheelReducer(noLoop, { type: 'COMPLETE' });
     expect(s.rotation).toBe(0);
     expect(s.direction).toBeNull();
     expect(s.queuedSlotIndices).toEqual([]);
     expect(s.currentSlotAtHead).toBeNull();
   });
 
-  it('preserves slots, selectedStone, and bpm', () => {
+  it('preserves slots, selectedStone, and bpm (loop=false)', () => {
     const withSelection = select(initialWheelState, 'earth');
     const placed = place(withSelection, 5);
     const wind = cw(placed, 36);
     const released = wheelReducer(wind, { type: 'RELEASE' });
-    const s = wheelReducer(released, { type: 'COMPLETE' });
+    const noLoop = wheelReducer(released, { type: 'SET_LOOP', loop: false });
+    const s = wheelReducer(noLoop, { type: 'COMPLETE' });
     expect(s.slots[5]).toBe('earth');
     expect(s.selectedStone).toBe('earth');
     expect(s.bpm).toBe(100);
@@ -363,6 +366,36 @@ describe('COMPLETE', () => {
       expect(wheelReducer(state, { type: 'COMPLETE' })).toBe(state);
     },
   );
+
+  it('COMPLETE with loop=true and queuedSlotIndices > 0 returns springBack', () => {
+    const wind = cw(initialWheelState, 36);
+    const released = wheelReducer(wind, { type: 'RELEASE' });
+    const s = wheelReducer(released, { type: 'COMPLETE' });
+    expect(s.mode).toBe('springBack');
+  });
+
+  it('COMPLETE with loop=true preserves queuedSlotIndices', () => {
+    const wind = cw(cw(initialWheelState, 36), 36);
+    const released = wheelReducer(wind, { type: 'RELEASE' });
+    const s = wheelReducer(released, { type: 'COMPLETE' });
+    expect(s.queuedSlotIndices).toEqual([9, 8]);
+  });
+
+  it('COMPLETE with loop=false returns ready', () => {
+    const wind = cw(initialWheelState, 36);
+    const released = wheelReducer(wind, { type: 'RELEASE' });
+    const noLoop = wheelReducer(released, { type: 'SET_LOOP', loop: false });
+    const s = wheelReducer(noLoop, { type: 'COMPLETE' });
+    expect(s.mode).toBe('ready');
+  });
+
+  it('COMPLETE with loop=true but empty queuedSlotIndices returns ready', () => {
+    const s = wheelReducer(
+      createState({ mode: 'springBack', loop: true, queuedSlotIndices: [], direction: 'cw' }),
+      { type: 'COMPLETE' },
+    );
+    expect(s.mode).toBe('ready');
+  });
 });
 
 // ================================================================ SET_BPM
@@ -418,13 +451,14 @@ describe('SET_LOOP', () => {
 // ============================================================= full cycles
 
 describe('full cycles', () => {
-  it('ready → select → place → CW wind → release → complete preserves state', () => {
+  it('ready → select → place → CW wind → release → complete preserves state (loop=false)', () => {
     const afterPlace = place(select(initialWheelState, 'earth'), 5);
     const wind = cw(afterPlace, 36);
     expect(wind.mode).toBe('winding');
     const released = wheelReducer(wind, { type: 'RELEASE' });
     expect(released.mode).toBe('springBack');
-    const completed = wheelReducer(released, { type: 'COMPLETE' });
+    const noLoop = wheelReducer(released, { type: 'SET_LOOP', loop: false });
+    const completed = wheelReducer(noLoop, { type: 'COMPLETE' });
     expect(completed.mode).toBe('ready');
     expect(completed.slots[5]).toBe('earth');
     expect(completed.rotation).toBe(0);
@@ -433,14 +467,15 @@ describe('full cycles', () => {
     expect(completed.currentSlotAtHead).toBeNull();
   });
 
-  it('ready → CCW wind → tack → release → complete returns to ready', () => {
+  it('ready → CCW wind → tack → release → complete returns to ready (loop=false)', () => {
     const wind = ccw(initialWheelState, 36);
     expect(wind.mode).toBe('winding');
     const tacked = wheelReducer(wind, { type: 'TACK' });
     expect(tacked.mode).toBe('tack');
     const released = wheelReducer(tacked, { type: 'RELEASE' });
     expect(released.mode).toBe('springBack');
-    const completed = wheelReducer(released, { type: 'COMPLETE' });
+    const noLoop = wheelReducer(released, { type: 'SET_LOOP', loop: false });
+    const completed = wheelReducer(noLoop, { type: 'COMPLETE' });
     expect(completed.mode).toBe('ready');
   });
 });
@@ -459,11 +494,12 @@ describe('edge cases', () => {
     expect(s.slots.filter((x) => x === 'earth')).toHaveLength(2); // indices 0 and 5
   });
 
-  it('early release after small wind works', () => {
+  it('early release after small wind works (loop=false)', () => {
     const wind = cw(initialWheelState, 36);
     const released = wheelReducer(wind, { type: 'RELEASE' });
     expect(released.mode).toBe('springBack');
-    const completed = wheelReducer(released, { type: 'COMPLETE' });
+    const noLoop = wheelReducer(released, { type: 'SET_LOOP', loop: false });
+    const completed = wheelReducer(noLoop, { type: 'COMPLETE' });
     expect(completed.mode).toBe('ready');
   });
 

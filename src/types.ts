@@ -53,3 +53,4 @@ export const SLOT_ANGLE_SPAN = 300 / 9;
 export const SLOT_START_ANGLE = 210;
 export const HEAD_ANGLE = 180;
 
+export const SLOT_ORBIT_RADIUS = 122;

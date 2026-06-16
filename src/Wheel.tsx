@@ -1,5 +1,5 @@
 import type { WheelState, WheelAction, ElementType } from './types';
-import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE } from './types';
+import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE, SLOT_ORBIT_RADIUS } from './types';
 import Slot from './Slot';
 import Head from './Head';
 import { useEffect, useRef, useState } from 'react';
@@ -8,16 +8,16 @@ import { useWheelGesture } from './useWheelGesture';
 interface WheelProps {
   state: WheelState;
   dispatch: React.Dispatch<WheelAction>;
+  snapTargetSlot: number | null;
 }
 
 const SLOT_COUNT = 10;
 const SLOT_TOP = 10;
 const SLOT_SIZE = 36;
 const WHEEL_RADIUS = 150;
-const ORIGIN_DISTANCE = WHEEL_RADIUS - (SLOT_TOP + SLOT_SIZE / 2);
 
 
-function Wheel({ state, dispatch }: WheelProps) {
+function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
   const headElement =
     state.currentSlotAtHead !== null
       ? state.slots[state.currentSlotAtHead]
@@ -115,7 +115,7 @@ function Wheel({ state, dispatch }: WheelProps) {
                 top: `${SLOT_TOP}px`,
                 left: '50%',
                 transform: `translateX(-50%) rotate(${slotAngle}deg)`,
-                transformOrigin: `center ${ORIGIN_DISTANCE}px`,
+                transformOrigin: `center ${SLOT_ORBIT_RADIUS}px`,
               }}
             >
               <Slot
@@ -127,6 +127,7 @@ function Wheel({ state, dispatch }: WheelProps) {
                 mode={state.mode}
                 isPlayed={isPlayed}
                 isCurrentlyPlaying={isCurrentlyPlaying}
+                isSnapTarget={snapTargetSlot === i}
               />
             </div>
           );
