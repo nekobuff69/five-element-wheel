@@ -37,8 +37,8 @@ describe('initial state', () => {
     expect(initialWheelState.currentSlotAtHead).toBeNull();
   expect(initialWheelState.bpm).toBe(180);
   expect(initialWheelState.loop).toBe(true);
-  expect(initialWheelState.key).toBe('C');
-  expect(initialWheelState.octave).toBe(4);
+  expect(initialWheelState.key).toBe('F');
+  expect(initialWheelState.octave).toBe(5);
   });
 });
 
@@ -553,7 +553,7 @@ describe('SET_KEY', () => {
 
   it('rejects invalid key', () => {
     const s = wheelReducer(initialWheelState, { type: 'SET_KEY', key: 'Z' });
-    expect(s.key).toBe('C'); // unchanged
+    expect(s.key).toBe('F'); // unchanged
   });
 
   it('works in any state', () => {

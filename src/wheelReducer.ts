@@ -11,8 +11,8 @@ export const initialWheelState: WheelState = {
   currentSlotAtHead: null,
   bpm: 180,
   loop: true,
-  key: 'C',
-  octave: 4,
+  key: 'F',
+  octave: 5,
 };
 
 
