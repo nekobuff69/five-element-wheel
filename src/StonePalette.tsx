@@ -129,7 +129,7 @@ function StonePalette({ selectedStone, onSelectStone, onClear, dispatch, wheelMo
         </div>
       ))}
       <button className="stone-palette__clear" onClick={onClear}>
-        Clear
+        Reset
       </button>
       {draggingElement && (ghostPosition || isFadingOut) && (
         <div

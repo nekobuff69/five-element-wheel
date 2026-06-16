@@ -22,7 +22,7 @@ export type WheelAction =
   | { type: 'SELECT_STONE'; element: ElementType }
   | { type: 'PLACE_STONE'; slotIndex: number; element?: ElementType }
   | { type: 'REMOVE_STONE'; slotIndex: number }
-  | { type: 'CLEAR_ALL' }
+  | { type: 'RESET' }
   | { type: 'WIND'; delta: number }
   | { type: 'RELEASE' }
   | { type: 'COMPLETE' }

@@ -105,8 +105,8 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
       return { ...state, slots: newSlots };
     }
 
-    case 'CLEAR_ALL': {
-      return { ...state, slots: Array(10).fill(null), queuedSlotIndices: [], mode: 'ready', rotation: 0, direction: null, currentSlotAtHead: null };
+    case 'RESET': {
+      return { ...initialWheelState };
     }
 
     case 'WIND': {

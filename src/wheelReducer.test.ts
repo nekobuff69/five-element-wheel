@@ -175,15 +175,15 @@ describe('REMOVE_STONE', () => {
   });
 });
 
-// =============================================================== CLEAR_ALL
+// =============================================================== RESET
 
-describe('CLEAR_ALL', () => {
+describe('RESET', () => {
   it('clears all filled slots', () => {
     let s = select(initialWheelState, 'earth');
     s = place(s, 0);
     s = select(s, 'metal');
     s = place(s, 1);
-    const cleared = wheelReducer(s, { type: 'CLEAR_ALL' });
+    const cleared = wheelReducer(s, { type: 'RESET' });
     expect(cleared.slots.every((x) => x === null)).toBe(true);
   });
 
@@ -191,7 +191,7 @@ describe('CLEAR_ALL', () => {
     let s = select(initialWheelState, 'earth');
     s = place(s, 0);
     s = cw(s);
-    const cleared = wheelReducer(s, { type: 'CLEAR_ALL' });
+    const cleared = wheelReducer(s, { type: 'RESET' });
     expect(cleared.mode).toBe('ready');
     expect(cleared.slots.every((x) => x === null)).toBe(true);
   });
@@ -201,7 +201,7 @@ describe('CLEAR_ALL', () => {
     s = place(s, 0);
     s = cw(s);
     s = wheelReducer(s, { type: 'RELEASE' });
-    const cleared = wheelReducer(s, { type: 'CLEAR_ALL' });
+    const cleared = wheelReducer(s, { type: 'RESET' });
     expect(cleared.mode).toBe('ready');
     expect(cleared.slots.every((x) => x === null)).toBe(true);
   });
@@ -210,14 +210,14 @@ describe('CLEAR_ALL', () => {
     let s = cw(initialWheelState);
     s = cw(s);
     expect(s.queuedSlotIndices.length).toBeGreaterThan(0);
-    const cleared = wheelReducer(s, { type: 'CLEAR_ALL' });
+    const cleared = wheelReducer(s, { type: 'RESET' });
     expect(cleared.queuedSlotIndices).toEqual([]);
   });
 
   it('still works in ready mode', () => {
     let s = select(initialWheelState, 'water');
     s = place(s, 3);
-    const cleared = wheelReducer(s, { type: 'CLEAR_ALL' });
+    const cleared = wheelReducer(s, { type: 'RESET' });
     expect(cleared.mode).toBe('ready');
     expect(cleared.slots.every((x) => x === null)).toBe(true);
   });

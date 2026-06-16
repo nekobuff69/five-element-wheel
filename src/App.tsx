@@ -17,7 +17,7 @@ function App() {
           dispatch({ type: 'SELECT_STONE', element: el });
         }}
         onClear={() => {
-          dispatch({ type: 'CLEAR_ALL' });
+          dispatch({ type: 'RESET' });
         }}
         dispatch={dispatch}
         wheelMode={state.mode}
