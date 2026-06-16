@@ -24,7 +24,7 @@ Replace Tone.js with native Web Audio API for all spring-back playback:
 
 5. **State management**: `PlaybackState` replaces the React `playbackRef` for tracking playback lifetime. Native nodes self-clean via `onended`. `PlaybackControl` interface exposes `cancel()`, `updateSlots()`, `t0`, and `beatInterval` for external coordination (loop restart, hot reload).
 
-6. **Frequency map**: `ELEMENT_TO_FREQ` (in `playback.ts`) records Hz values directly (C4=261.63, D4=293.66, E4=329.63, G4=392.00, A4=440.00), replacing the note-name-based `ELEMENT_TO_NOTE` from `types.ts`.
+6. **Frequency map**: `getElementFrequencies()` (now in `src/frequencies.ts`) computes Hz values dynamically from a key + octave + pentatonic intervals, replacing the static `ELEMENT_TO_FREQ` approach. The former `ELEMENT_TO_NOTE` was removed as dead code — it was never imported anywhere.
 
 ## Alternatives considered
 

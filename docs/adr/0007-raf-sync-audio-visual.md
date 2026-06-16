@@ -28,7 +28,7 @@ The rAF loop lives in `playback.ts` and runs at the compositor rate (~60fps), ch
 
 ### 2. Shared `t0` origin
 
-`startPlayback()` in `playback.ts` computes `t0 = ctx.currentTime + 0.05` (50ms lookahead) internally. The `useEffect` in `Wheel.tsx` calls `startPlayback(config, onBeat, onComplete)`. The rAF loop and audio scheduler share this `t0`. CSS transition starts in the same frame. All three consumers — audio scheduler, rAF visual loop, and CSS transition — share the same time origin.
+`startPlayback()` in `playback.ts` computes `t0 = ctx.currentTime + 0.05` (50ms lookahead) internally. The `useEffect` in `useWheelPlayback.ts` calls `startPlayback(config, onBeat, onComplete)`. The rAF loop and audio scheduler share this `t0`. CSS transition starts in the same frame. All three consumers — audio scheduler, rAF visual loop, and CSS transition — share the same time origin.
 
 ### 3. Playback order = encounter order (no sorting)
 

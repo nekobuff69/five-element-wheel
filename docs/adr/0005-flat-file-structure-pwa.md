@@ -15,22 +15,27 @@ The Five-Element Wheel is a single-screen mobile PWA with ~13 source files. We n
 
 ## Decision
 
-**File structure**: All source code in `src/` — no feature folders, no `components/`, `hooks/`, `utils/` subdirectories. 12 TypeScript files + 1 CSS file:
+**File structure**: All source code in `src/` — no feature folders, no `components/`, `hooks/`, `utils/` subdirectories. 14 TypeScript files + 1 CSS file:
 
 ```
 src/
   main.tsx             — React entry point
   App.tsx              — Root component, useReducer host
-  types.ts             — ElementType, WheelState, WheelAction, constants
+  types.ts             — ElementType, WheelState, WheelAction, element data (colors, symbols, intervals), KEY_NAMES
+  frequencies.ts       — getElementFrequencies() pure music theory
   wheelReducer.ts      — Pure reducer + initial state
-  wheelReducer.test.ts — 55 unit tests
-  Wheel.tsx            — Pointer events, spring-back logic, slot rendering
-  Slot.tsx             — Presentational: empty/filled/glow/dim
+  wheelReducer.test.ts — 88 unit tests
+  playback.ts          — Native Web Audio scheduling engine: AudioContext singleton, tack sound, rAF-synced playback, loop with hot reload
+  playback.test.ts     — 23 unit tests
+  useWheelGesture.ts   — Pointer-drag gesture hook
+  useWheelPlayback.ts  — Hook: tack detection/sound, spring-back playback lifecycle, hot-reload sync
+  geometry.ts          — getSlotPosition(), findSnapTarget(), geometry constants (slot angles, orbit radius)
+  Wheel.tsx            — Render component: gesture hook + playback hook → dispatch + visual layout
+  Slot.tsx             — Presentational: empty/filled/glow/dim/snap-target
   Head.tsx             — Fixed marker at 6 o'clock
-  StonePalette.tsx     — 5 stones + Clear button
-  BPMControl.tsx       — Range slider + "C Pentatonic" label
-  playback.ts          ← native Web Audio + rAF sync
-  useWheelGesture.ts   ← pointer-drag gesture hook
+  StonePalette.tsx     — 5 stones + Clear + stone drag gesture via geometry.findSnapTarget()
+  LoopToggle.tsx       — Checkbox for loop toggle
+  BPMControl.tsx       — Key selector (12 notes) + Octave selector (-2..+2) + BPM slider (60-180)
   index.css            — All styles with custom properties
 ```
 
@@ -50,7 +55,7 @@ src/
 
 ## Consequences
 
-- **Positive**: A new developer can understand the entire codebase by reading 13 files in a flat directory.
+- **Positive**: A new developer can understand the entire codebase by reading 15 files in a flat directory.
 - **Positive**: `bun run build` produces a 414KB PWA bundle that works fully offline after first visit.
 - **Negative**: If the app grows beyond ~20 files, the flat structure will become unwieldy. At that point, extract `src/components/` and `src/state/`. The ADR should be revisited before the 20-file threshold.
 - **Negative**: The 192px and 512px icons are programmatically generated placeholders (5-color wheel segments). They should be replaced with a proper designed icon before production release.

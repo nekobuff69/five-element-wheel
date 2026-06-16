@@ -55,7 +55,7 @@ When `updateSlots()` is called:
   - Clamp `startTime` to `Math.max(baseTime, ctx.currentTime + 0.01)` to handle mid-beat edits
 - Already-played beats (absBeat < `currentBeat`) unchanged
 
-The `Wheel.tsx` component watches `state.slots` changes during `springBack` mode and calls `updateSlots()` with the current beat computed from `AudioContext.currentTime`.
+The `useWheelPlayback` hook watches `state.slots` changes during `springBack` mode and calls `updateSlots()` with the current beat computed from `AudioContext.currentTime`.
 
 ### 4. Iteration atomicity
 

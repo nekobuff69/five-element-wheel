@@ -52,17 +52,20 @@ CSS: `.stone-ghost { transition: opacity 0.2s ease-out; }` and `.stone-ghost--fa
 
 ### 4. Snap-to-slot detection
 
-During pointer move, compute distance from cursor to each slot center. Slot positions computed via `getSlotPosition()` in `geometry.ts`, rotated by current wheel rotation.
+During pointer move, compute distance from cursor to each slot center. The snap detection is handled by `findSnapTarget()` in `geometry.ts`, which computes rotated slot positions via `getSlotPosition()` and returns the nearest slot within the threshold, along with its screen coordinates for ghost teleportation.
 
 ```typescript
-for (let i = 0; i < SLOT_COUNT; i++) {
-  const base = getSlotPosition(i, 0, 0, SLOT_ORBIT_RADIUS);
-  const dx = base.x * cosR - base.y * sinR;
-  const dy = base.x * sinR + base.y * cosR;
-  const slotX = cx + dx;
-  const slotY = cy + dy;
-  const dist = Math.hypot(slotX - cursorX, slotY - cursorY);
-  // ...
+const snap = findSnapTarget(
+  cursorX, cursorY,
+  cx, cy,
+  wheelRotation,
+  SLOT_COUNT,
+  SNAP_THRESHOLD_PX,
+  SLOT_ORBIT_RADIUS
+);
+if (snap) {
+  setGhostPosition({ x: snap.x, y: snap.y });
+  setSnapTargetSlot(snap.slotIndex);
 }
 ```
 
@@ -104,7 +107,7 @@ Slot components render `data-slot-index={index}` attribute. On pointer up (when 
 | Instant ghost disappear on release | Jarring — no visual feedback that drag ended. Fade-out provides smooth transition. |
 | Larger snap threshold (> 30px) | Too twitchy — slots are close together, easy to snap to wrong slot |
 | Smaller snap threshold (< 30px) | Defeats purpose — user still needs precision |
-| Separate snap detection module | Over-engineering — logic is 20 lines, lives in StonePalette where it's used |
+|| Inline snap geometry in StonePalette (v1) | Extracted to `findSnapTarget()` in geometry.ts on 2026-06-16 — the logic grew to ~30+ lines with rotation matrix + nearest-neighbor search, was untestable in React event handlers, and the cost of the module boundary was justified by independent testability. |
 
 ## Consequences
 
@@ -114,6 +117,6 @@ Slot components render `data-slot-index={index}` attribute. On pointer up (when 
 - **Positive**: Fade-out animation provides smooth visual feedback that drag ended.
 - **Positive**: Backward compatible — existing click-to-place flow still works.
 - **Positive**: Mobile support via `touch-action: none` — no scroll/zoom interference during drag.
-- **Negative**: StonePalette component is more complex — tracks draggingElement, ghostPosition, isFadingOut, snapTargetSlot, plus refs for stable listeners. Acceptable for the feature value.
+- **Negative**: StonePalette component is complex — tracks draggingElement, ghostPosition, isFadingOut, snapTargetSlot, plus refs for stable listeners. Acceptable for the feature value. Partially mitigated by extracting snap geometry into `findSnapTarget()`.
 - **Negative**: Snap detection runs on every pointer move (60fps during drag). Computes 10 slot positions per frame. Negligible cost — `Math.hypot` is fast, 10 iterations is trivial.
 - **Negative**: `data-slot-index` attribute on Slot components is a leaky abstraction — StonePalette reaches into DOM to find slots. Acceptable — it's a pragmatic solution for hit testing.

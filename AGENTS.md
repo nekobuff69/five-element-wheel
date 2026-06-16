@@ -39,17 +39,19 @@ The triage state machine uses the default label vocabulary (`needs-triage`, `nee
 ```
 src/
   main.tsx, App.tsx            — entry + root component
-  types.ts                     — ElementType, WheelState, WheelAction, geometry constants, KEY_NAMES, ELEMENT_INTERVALS
+  types.ts                     — ElementType, WheelState, WheelAction, element data (colors, symbols, intervals), KEY_NAMES
+  frequencies.ts               — getElementFrequencies() pure music theory (key + octave → Hz)
   wheelReducer.ts              — pure reducer + initialWheelState + helpers (handles SET_KEY, SET_OCTAVE)
   wheelReducer.test.ts         — 88 unit tests (state machine + actions + key/octave)
-  playback.ts                  — AudioContext, tack sound, rAF-synced playback, getElementFrequencies(), updateSlots for hot reload
+  playback.ts                  — AudioContext singleton, tack sound, rAF-synced scheduling engine with hot reload
   playback.test.ts             — 23 unit tests (updateSlots behavior + frequencies)
   useWheelGesture.ts           — pointer-drag gesture hook (angular delta + threshold)
-  geometry.ts                  — getSlotPosition() for snap detection
-  Wheel.tsx                    — orchestrator: gesture → dispatch → playback (passes key/octave to startPlayback)
+  useWheelPlayback.ts          — hook: tack detection/sound, spring-back playback lifecycle, hot-reload sync
+  geometry.ts                  — getSlotPosition(), findSnapTarget(), geometry constants (slot angles, orbit radius)
+  Wheel.tsx                    — render component: gesture hook + playback hook → dispatch + visual layout
   Slot.tsx                     — empty/filled/glow/dim/snap-target states
   Head.tsx                     — fixed marker at 6 o'clock
-  StonePalette.tsx             — 5 stone circles + Clear + stone drag gesture + ghost stone
+  StonePalette.tsx             — 5 stone circles + Clear + stone drag gesture via geometry.findSnapTarget()
   LoopToggle.tsx               — checkbox toggle for loop enabled/disabled
   BPMControl.tsx               — Key selector (12 notes) + Octave selector (-2..+2) + BPM slider (60-180)
   index.css                    — all styles
@@ -71,7 +73,7 @@ src/
 - `WIND` resets rotation baseline to 0 when transitioning from `springBack` (CSS already animated to 0°)
 - `RELEASE` captures approaching slot if within 10° of head (matches visual glow expectation)
 - Playback handles looping internally: pre-schedules 4 iterations, extends dynamically, no gaps between loops
-- Snap detection computes slot positions from `getSlotPosition()` in `geometry.ts`, rotated by current wheel rotation.
+- Snap detection uses `findSnapTarget()` in `geometry.ts`, which computes rotated slot positions via `getSlotPosition()` and finds the nearest within threshold.
 - `PlaybackControl.updateSlots()` cancels future oscillators (beats ≥ currentBeat), re-schedules with new elements. Already-played beats unchanged.
 - Ghost stone fades out over 200ms on pointer up via CSS transition + setTimeout cleanup.
 - Key is stored as a 12-tone chromatic name (`C`, `C#`, …, `B`) in `state.key`. Pentatonic intervals preserved across all keys.

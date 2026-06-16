@@ -77,10 +77,10 @@ The five elements map to the pentatonic scale (五音 / wǔ yīn). The **key** c
 - **WINDING** queues **Slots** into `queuedSlotIndices` as they cross the **Head**
 - **SPRING_BACK** plays the **queued slots** in **play order** determined by wind direction
 - **BPM** controls the spring-back CSS transition duration and the interval between scheduled audio notes. Default is 180.
-- **Key** and **octave** control element frequencies via `getElementFrequencies()`. Pentatonic intervals are preserved across all keys.
+- **Key** and **octave** control element frequencies via `getElementFrequencies()` (in `frequencies.ts`). Pentatonic intervals are preserved across all keys.
 - Rotation is capped at ±360° (one full rotation); exceeding it triggers **TACK**
 - **Stone drag** dispatches **PLACE_STONE** with explicit `element` field; click-to-place uses `selectedStone` fallback
-- **Snap target** is computed from slot positions using `getSlotPosition()` in `geometry.ts`, rotated by current wheel rotation
+- **Snap target** is computed by `findSnapTarget()` in `geometry.ts`, which rotates slot positions via `getSlotPosition()` and returns the nearest within threshold.
 - **COMPLETE** preserves key and octave along with slots, selectedStone, and BPM
 
 ## Example dialogue
