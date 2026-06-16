@@ -74,7 +74,7 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
       control.cancel();
       playbackRef.current = null;
     };
-  }, [state.mode, state.queuedSlotIndices, state.bpm, state.direction, dispatch]);
+  }, [state.mode, state.queuedSlotIndices, state.bpm, state.direction, dispatch, state.loopIteration]);
 
   useEffect(() => {
     if (state.mode !== 'springBack') return;
