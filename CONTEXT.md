@@ -31,8 +31,8 @@ The five elements map to the C pentatonic scale (五音 / wǔ yīn). Together th
 | **READY** | The idle state; stones can be placed, selected, or cleared. Drag starts winding. | Idle, default, editing |
 | **WINDING** | The user is dragging the wheel; rotation follows the finger. Slots cross the head and are queued. | Dragging, turning, spinning |
 | **TACK** | The wheel has reached its mechanical stop at one full rotation (360°). A 30ms noise burst plays. | Stop, limit, catch |
-| **SPRING_BACK** | The wheel returns to rest (first playback) or stays at rest (loop iterations); notes play at evenly-spaced intervals. Also accepts stone placement and wheel drag interruption. | Playback, unwinding, auto-return |
-| **COMPLETE** | Spring-back finished; if loop enabled and queued slots exist, re-enters SPRING_BACK for next iteration; otherwise resets to READY preserving slots, selection, and BPM. | Done, finished, reset |
+| **SPRING_BACK** | The wheel returns to rest position (0°) while notes play at evenly-spaced intervals. Playback handles looping internally — wheel stays at rest. Also accepts stone placement and wheel drag interruption. | Playback, unwinding, auto-return |
+| **COMPLETE** | Spring-back finished; resets to READY preserving slots, selection, and BPM. Playback handles looping internally. | Done, finished, reset |
 
 ## Actions (dispatched to the reducer)
 
@@ -53,8 +53,8 @@ The five elements map to the C pentatonic scale (五音 / wǔ yīn). Together th
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
 | **Spring-back** | The automatic return of the wheel to its rest position (0°) after release; duration = `queuedSlotCount × (60 / BPM)` seconds. First spring-back uses CSS transition synced to audio. | Unwinding, playback, return |
-| **Loop** | Automatic replay of the melody after first spring-back completes. Pure audio replay — wheel stays at rest position. Each iteration re-reads `slots` from state, enabling hot reload of stone edits. | Auto-repeat, cycle |
-| **Loop iteration** | One complete playback cycle during loop. Atomic unit: stone edits apply to future beats (not already-scheduled audio). BPM changes apply on next iteration. | Pass, cycle, repetition |
+| **Loop** | Automatic replay of the melody without gaps. Playback pre-schedules multiple iterations and extends dynamically. Wheel stays at rest position during loop. Stone edits apply to all future beats across iterations. | Auto-repeat, cycle |
+| **Loop iteration** | One complete playback cycle during loop. All iterations are scheduled continuously — no gaps between them. Stone edits apply immediately to all future beats. | Pass, cycle, repetition |
 | **Hot reload** | Mid-playback stone edits take effect on future beats. `PlaybackControl.updateSlots()` cancels oscillators for beats ≥ current, re-schedules with new elements. Already-played beats unchanged. | Live edit, real-time update |
 | **Queued slots** | Slots that crossed the head during winding, stored in crossing order; determines which notes play and in what sequence | Triggered slots, crossing set |
 | **Play order** | Encounter order: queued slots play in the exact order they crossed the head during winding | Melody order, sequence |
@@ -73,7 +73,6 @@ The five elements map to the C pentatonic scale (五音 / wǔ yīn). Together th
 - **SPRING_BACK** plays the **queued slots** in **play order** determined by wind direction
 - **BPM** controls the spring-back CSS transition duration and the interval between scheduled audio notes
 - Rotation is capped at ±360° (one full rotation); exceeding it triggers **TACK**
-- **Loop** re-enters **SPRING_BACK** on **COMPLETE** if `loop === true` and `queuedSlotIndices.length > 0`
 - **Stone drag** dispatches **PLACE_STONE** with explicit `element` field; click-to-place uses `selectedStone` fallback
 - **Snap target** is computed from slot positions using `getSlotPosition()` in `geometry.ts`, rotated by current wheel rotation
 

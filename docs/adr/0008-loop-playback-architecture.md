@@ -23,29 +23,37 @@ After first spring-back completes, the wheel stays at rest position (0°). Loop 
 
 Rationale: The physical wind is the performance — the user's gesture. Loop is about the composition repeating. Auto-spinning the wheel would add motor simulation the instrument metaphor doesn't need.
 
-### 2. `loopIteration` counter forces useEffect re-run
+### 2. Seamless looping via pre-scheduling
 
-The `COMPLETE` action returns `mode: 'springBack'` (same mode) when loop is enabled. React's useEffect dependency check sees no mode change, so we add `loopIteration: number` to state. Each loop iteration increments the counter, triggering the useEffect that calls `startPlayback()`.
+The `startPlayback()` function pre-schedules 4 iterations upfront and extends dynamically as playback approaches the end. This eliminates gaps between loops that would occur if each iteration required a round-trip through React state.
 
 ```typescript
-case 'COMPLETE': {
-  if (state.loop && state.queuedSlotIndices.length > 0) {
-    return { ...state, mode: 'springBack', loopIteration: state.loopIteration + 1 };
-  }
-  return { ...initialWheelState, slots: state.slots, selectedStone: state.selectedStone, bpm: state.bpm, loop: state.loop };
+// Schedule initial iterations (4 loops worth)
+const INITIAL_ITERATIONS = 4;
+for (let iter = 0; iter < INITIAL_ITERATIONS; iter++) {
+  scheduleIteration(iter * N);
+}
+
+// Extend scheduling if approaching the end
+if (pb.loop && currentBeat >= pb.totalScheduledBeats - pb.count) {
+  scheduleIteration(pb.totalScheduledBeats);
+  pb.totalScheduledBeats += pb.count;
 }
 ```
+
+Rationale: The previous architecture used a `loopIteration` counter to force useEffect re-run, causing audible gaps as each iteration required dispatch → re-render → new `startPlayback()` call. Pre-scheduling keeps the audio graph continuous.
 
 ### 3. `PlaybackControl.updateSlots()` for hot reload
 
 `startPlayback()` returns a `PlaybackControl` object with `cancel()` and `updateSlots(newSlots, currentBeat)` methods. The playback state tracks per-beat oscillator refs in `oscillators: (OscillatorInfo | null)[]`.
 
 When `updateSlots()` is called:
-- For each beat index ≥ `currentBeat`:
+- For each absolute beat index ≥ `currentBeat` across all scheduled iterations:
+  - Compute position within iteration: `absBeat % count`
   - Cancel existing oscillator (stop + disconnect)
   - Re-schedule with new element from `newSlots` (if element changed)
   - Clamp `startTime` to `Math.max(baseTime, ctx.currentTime + 0.01)` to handle mid-beat edits
-- Already-played beats (index < `currentBeat`) unchanged
+- Already-played beats (absBeat < `currentBeat`) unchanged
 
 The `Wheel.tsx` component watches `state.slots` changes during `springBack` mode and calls `updateSlots()` with the current beat computed from `AudioContext.currentTime`.
 
@@ -72,10 +80,9 @@ Each loop iteration is an atomic unit:
 
 ## Consequences
 
-- **Positive**: Loop is transparent — first spring-back uses CSS transition synced to audio; loop iterations are pure audio with visual slot highlighting via `onBeat` callback.
-- **Positive**: Hot reload works naturally — `updateSlots()` cancels future oscillators, re-schedules with new elements. Already-played beats unchanged.
-- **Positive**: `loopIteration` counter is a clean mechanism to force useEffect re-run without synthetic actions.
+- **Positive**: Loop is seamless — pre-scheduling eliminates gaps between iterations. First spring-back uses CSS transition synced to audio; loop iterations are pure audio with visual slot highlighting via `onBeat` callback.
+- **Positive**: Hot reload works naturally — `updateSlots()` cancels future oscillators across all scheduled iterations, re-schedules with new elements. Already-played beats unchanged.
 - **Positive**: Loop interruption is natural — user can drag wheel or clear all stones anytime.
-- **Negative**: `loopIteration` counter grows unbounded. Not a practical concern — JavaScript handles large integers fine, and counter resets on page reload.
+- **Negative**: Pre-scheduling multiple iterations increases memory usage (oscillator array grows with each iteration). Mitigated by dynamic extension — only 4 iterations scheduled initially, more added as needed.
 - **Negative**: Hot reload requires per-beat oscillator tracking, adding complexity to `playback.ts`. Acceptable for the feature value.
 - **Negative**: Mid-beat edits clamp `startTime` to `ctx.currentTime + 0.01`, causing slight timing imprecision. Imperceptible in practice.

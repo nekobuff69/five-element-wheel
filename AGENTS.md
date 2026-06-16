@@ -12,7 +12,7 @@ The triage state machine uses the default label vocabulary (`needs-triage`, `nee
 
 - **`CONTEXT.md`** — ubiquitous language glossary: instrument anatomy (wheel, slot, head, stone, palette, ghost stone, snap target), elements and notes (Earth/C4, Metal/D4, Wood/E4, Fire/G4, Water/A4), wheel state machine (READY→WINDING→TACK→SPRING_BACK→COMPLETE), performance concepts (spring-back, loop, loop iteration, hot reload, queued slots, play order, beat grid, tack sound, early release, stone drag, snap).
 - **`docs/adr/`** — architecture decision records:
-  - `0001-use-reducer-state-machine.md` — useReducer with pure reducer, 81 tests
+  - `0001-use-reducer-state-machine.md` — useReducer with pure reducer, 100 tests
   - `0002-css-transform-rotation.md` — CSS transforms for winding + spring-back
   - `0003-tonejs-transport-audio.md` — tone.js PluckSynth + Transport scheduling (superseded)
   - `0004-angular-pointer-drag.md` — pointer events with angular delta
@@ -31,7 +31,7 @@ The triage state machine uses the default label vocabulary (`needs-triage`, `nee
 - **Interaction**: Raw pointer events, angular-only drag for wheel, document-level listeners for stone drag
 - **Rotation**: CSS `transform: rotate()` with inline transition override for spring-back
 - **PWA**: `vite-plugin-pwa` with workbox `generateSW`, offline precache, iOS meta tags
-- **Testing**: Vitest + jsdom, 81 tests (`src/wheelReducer.test.ts`, `src/playback.test.ts`)
+- **Testing**: Vitest + jsdom, 100 tests (`src/wheelReducer.test.ts`, `src/playback.test.ts`)
 - **Package manager**: bun 1.3+
 
 ### File structure (flat)
@@ -41,12 +41,12 @@ src/
   main.tsx, App.tsx            — entry + root component
   types.ts                     — ElementType, WheelState, WheelAction, geometry constants
   wheelReducer.ts              — pure reducer + initialWheelState + helpers
-  wheelReducer.test.ts         — 75 unit tests (state machine + actions)
+  wheelReducer.test.ts         — 77 unit tests (state machine + actions)
   playback.ts                  — AudioContext, tack sound, rAF-synced playback, updateSlots for hot reload
-  playback.test.ts             — 6 unit tests (updateSlots behavior)
+  playback.test.ts             — 23 unit tests (updateSlots behavior)
   useWheelGesture.ts           — pointer-drag gesture hook (angular delta + threshold)
   geometry.ts                  — getSlotPosition() for snap detection
-  Wheel.tsx                    — orchestrator: gesture → dispatch → playback, loop restart
+  Wheel.tsx                    — orchestrator: gesture → dispatch → playback
   Slot.tsx                     — empty/filled/glow/dim/snap-target states
   Head.tsx                     — fixed marker at 6 o'clock
   StonePalette.tsx             — 5 stone circles + Clear + stone drag gesture + ghost stone
@@ -67,9 +67,10 @@ src/
 - `PLACE_STONE` uses `action.element` if provided (stone drag), else `state.selectedStone` (click-to-place).
 - `CLEAR_ALL` valid in any mode — full reset including queued slots and mode.
 - `WIND` during `springBack` interrupts loop, resets queued indices for fresh wind cycle.
-- Loop re-enters `springBack` on `COMPLETE` if `loop === true` and `queuedSlotIndices.length > 0`.
-- `loopIteration` counter forces state change to trigger useEffect re-run for loop restart.
 - Stone drag uses document-level pointer events (not container-level) to avoid gesture blocking.
+- `WIND` resets rotation baseline to 0 when transitioning from `springBack` (CSS already animated to 0°)
+- `RELEASE` captures approaching slot if within 10° of head (matches visual glow expectation)
+- Playback handles looping internally: pre-schedules 4 iterations, extends dynamically, no gaps between loops
 - Snap detection computes slot positions from `getSlotPosition()` in `geometry.ts`, rotated by current wheel rotation.
 - `PlaybackControl.updateSlots()` cancels future oscillators (beats ≥ currentBeat), re-schedules with new elements. Already-played beats unchanged.
 - Ghost stone fades out over 200ms on pointer up via CSS transition + setTimeout cleanup.
