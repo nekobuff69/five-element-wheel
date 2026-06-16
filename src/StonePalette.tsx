@@ -21,6 +21,7 @@ interface StonePaletteProps {
 function StonePalette({ selectedStone, onSelectStone, onClear, dispatch, wheelRotation, wheelMode, onSnapTargetChange }: StonePaletteProps) {
   const [draggingElement, setDraggingElement] = useState<ElementType | null>(null);
   const [ghostPosition, setGhostPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isFadingOut, setIsFadingOut] = useState(false);
   const [snapTargetSlot, setSnapTargetSlot] = useState<number | null>(null);
   const snapTargetSlotRef = useRef<number | null>(null);
   const draggingRef = useRef<ElementType | null>(null);
@@ -35,7 +36,6 @@ function StonePalette({ selectedStone, onSelectStone, onClear, dispatch, wheelRo
 
   const handlePointerDown = useCallback((el: ElementType) => (e: React.PointerEvent) => {
     e.preventDefault();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     setDraggingElement(el);
     draggingRef.current = el;
     setGhostPosition({ x: e.clientX, y: e.clientY });
@@ -113,15 +113,23 @@ function StonePalette({ selectedStone, onSelectStone, onClear, dispatch, wheelRo
         }
       }
 
-      setDraggingElement(null);
-      draggingRef.current = null;
-      setGhostPosition(null);
-      setSnapTargetSlot(null);
-      snapTargetSlotRef.current = null;
-      onSnapTargetChangeRef.current(null);
+      // Start fade-out
+      setIsFadingOut(true);
 
+      // Remove listeners immediately so no stray events interfere during fade
       document.removeEventListener('pointermove', moveHandlerRef.current!);
       document.removeEventListener('pointerup', upHandlerRef.current!);
+
+      // Delay state cleanup for fade animation
+      setTimeout(() => {
+        setDraggingElement(null);
+        draggingRef.current = null;
+        setGhostPosition(null);
+        setSnapTargetSlot(null);
+        snapTargetSlotRef.current = null;
+        onSnapTargetChangeRef.current(null);
+        setIsFadingOut(false);
+      }, 200);
     };
   }, []);
 
@@ -154,12 +162,12 @@ function StonePalette({ selectedStone, onSelectStone, onClear, dispatch, wheelRo
       <button className="stone-palette__clear" onClick={onClear}>
         Clear
       </button>
-      {draggingElement && ghostPosition && (
+      {draggingElement && (ghostPosition || isFadingOut) && (
         <div
-          className="stone-ghost"
+          className={`stone-ghost${isFadingOut ? ' stone-ghost--fading' : ''}`}
           style={{
-            left: ghostPosition.x,
-            top: ghostPosition.y,
+            left: ghostPosition?.x ?? 0,
+            top: ghostPosition?.y ?? 0,
             backgroundColor: ELEMENT_COLORS[draggingElement],
           }}
         >

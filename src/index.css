@@ -286,4 +286,9 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
   border: 3px solid transparent;
+  transition: opacity 0.2s ease-out;
+}
+
+.stone-ghost--fading {
+  opacity: 0;
 }
