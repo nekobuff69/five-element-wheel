@@ -12,7 +12,7 @@ export const initialWheelState: WheelState = {
   bpm: 180,
   loop: true,
   key: 'C',
-  octave: 0,
+  octave: 4,
 };
 
 
@@ -203,7 +203,7 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
     }
 
     case 'SET_OCTAVE': {
-      const octave = Math.max(-2, Math.min(2, action.octave));
+      const octave = Math.max(3, Math.min(8, action.octave));
       return { ...state, octave };
     }
 

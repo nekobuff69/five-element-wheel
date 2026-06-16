@@ -10,7 +10,7 @@ export function getElementFrequencies(key: string, octave: number): Record<Eleme
     // Fallback to C if invalid key
     return getElementFrequencies('C', octave);
   }
-  const rootFreq = C4 * 2 ** (semitoneFromC / 12 + octave);
+  const rootFreq = C4 * 2 ** (semitoneFromC / 12 + (octave - 4));
   const result = {} as Record<ElementType, number>;
   for (const el of Object.keys(ELEMENT_INTERVALS) as ElementType[]) {
     result[el] = rootFreq * 2 ** (ELEMENT_INTERVALS[el] / 12);

@@ -38,7 +38,7 @@ describe('initial state', () => {
   expect(initialWheelState.bpm).toBe(180);
   expect(initialWheelState.loop).toBe(true);
   expect(initialWheelState.key).toBe('C');
-  expect(initialWheelState.octave).toBe(0);
+  expect(initialWheelState.octave).toBe(4);
   });
 });
 
@@ -566,35 +566,35 @@ describe('SET_KEY', () => {
 // =============================================================== SET_OCTAVE
 
 describe('SET_OCTAVE', () => {
-  it('sets octave to 0', () => {
-    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: 0 });
-    expect(s.octave).toBe(0);
+  it('sets octave to 4', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: 4 });
+    expect(s.octave).toBe(4);
   });
 
-  it('sets octave to 1', () => {
-    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: 1 });
-    expect(s.octave).toBe(1);
-  });
-
-  it('sets octave to -1', () => {
-    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: -1 });
-    expect(s.octave).toBe(-1);
-  });
-
-  it('clamps above 2 to 2', () => {
+  it('sets octave to 5', () => {
     const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: 5 });
-    expect(s.octave).toBe(2);
+    expect(s.octave).toBe(5);
   });
 
-  it('clamps below -2 to -2', () => {
-    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: -5 });
-    expect(s.octave).toBe(-2);
+  it('sets octave to 3', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: 3 });
+    expect(s.octave).toBe(3);
+  });
+
+  it('clamps above 8 to 8', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: 10 });
+    expect(s.octave).toBe(8);
+  });
+
+  it('clamps below 3 to 3', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_OCTAVE', octave: 1 });
+    expect(s.octave).toBe(3);
   });
 
   it('works in any state', () => {
     const wind = cw(initialWheelState, 36);
-    const s = wheelReducer(wind, { type: 'SET_OCTAVE', octave: -1 });
-    expect(s.octave).toBe(-1);
+    const s = wheelReducer(wind, { type: 'SET_OCTAVE', octave: 6 });
+    expect(s.octave).toBe(6);
   });
 });
 

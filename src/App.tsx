@@ -27,7 +27,7 @@ function App() {
       <BPMControl
         bpm={state.bpm}
         onBPMChange={(bpm) => dispatch({ type: 'SET_BPM', bpm })}
-        key={state.key}
+        currentKey={state.key}
         onKeyChange={(key) => dispatch({ type: 'SET_KEY', key })}
         octave={state.octave}
         onOctaveChange={(octave) => dispatch({ type: 'SET_OCTAVE', octave })}

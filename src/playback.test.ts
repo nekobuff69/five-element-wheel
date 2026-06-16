@@ -125,7 +125,7 @@ describe('startPlayback updateSlots', () => {
     slotElements.forEach((el, i) => { slots[i] = el; });
 
     const control = startPlayback(
-      { queuedSlotIndices: queuedIndices, slots, bpm, direction: 'cw', loop: false, key: 'C', octave: 0 },
+      { queuedSlotIndices: queuedIndices, slots, bpm, direction: 'cw', loop: false, key: 'C', octave: 4 },
       vi.fn(),
       vi.fn(),
     );

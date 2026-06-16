@@ -3,15 +3,15 @@ import { KEY_NAMES } from './types';
 interface BPMControlProps {
   bpm: number;
   onBPMChange: (bpm: number) => void;
-  key: string;
+  currentKey: string;
   onKeyChange: (key: string) => void;
   octave: number;
   onOctaveChange: (octave: number) => void;
 }
 
-const OCTAVE_OPTIONS = [-2, -1, 0, 1, 2] as const;
+const OCTAVE_OPTIONS = [3, 4, 5, 6, 7, 8] as const;
 
-export default function BPMControl({ bpm, onBPMChange, key: currentKey, onKeyChange, octave, onOctaveChange }: BPMControlProps) {
+export default function BPMControl({ bpm, onBPMChange, currentKey, onKeyChange, octave, onOctaveChange }: BPMControlProps) {
   return (
     <div className="bpm-control">
       <label className="bpm-control__item">
@@ -32,13 +32,13 @@ export default function BPMControl({ bpm, onBPMChange, key: currentKey, onKeyCha
       <label className="bpm-control__item">
         <span className="bpm-control__label">Oct</span>
         <select
-          className={`bpm-control__select bpm-control__octave bpm-control__octave--${octave >= 0 ? 'pos' : 'neg'}`}
+          className="bpm-control__select bpm-control__octave"
           value={octave}
           onChange={(e) => onOctaveChange(Number(e.target.value))}
         >
           {OCTAVE_OPTIONS.map((o) => (
             <option key={o} value={o}>
-              {o >= 0 ? `+${o}` : `${o}`}
+              {o}
             </option>
           ))}
         </select>
