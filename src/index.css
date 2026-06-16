@@ -122,11 +122,6 @@ body {
   color: var(--slot-ring);
   opacity: 0.6;
 }
-
-.slot--at-head {
-  box-shadow: 0 0 12px 4px rgba(255, 255, 255, 0.4);
-}
-
 .slot--empty:hover {
   border-color: var(--slot-ring-hover);
 }
@@ -277,6 +272,20 @@ body {
 .slot--glow {
   box-shadow: 0 0 20px 8px rgba(255, 255, 255, 0.6);
   filter: brightness(1.4);
+  transition: box-shadow 0.15s, filter 0.15s;
+}
+
+/* Slot actually queued (captured) during winding */
+.slot--queued {
+  box-shadow: 0 0 20px 8px rgba(255, 255, 255, 0.6);
+  filter: brightness(1.4);
+  transition: box-shadow 0.15s, filter 0.15s;
+}
+
+/* Slot approaching head (not yet queued) during winding */
+.slot--approaching {
+  box-shadow: 0 0 12px 4px rgba(255, 255, 255, 0.3);
+  filter: brightness(1.15);
   transition: box-shadow 0.15s, filter 0.15s;
 }
 

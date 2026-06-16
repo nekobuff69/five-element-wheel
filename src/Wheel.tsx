@@ -111,6 +111,7 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
                 index={i}
                 element={state.slots[i]}
                 isAtHead={state.currentSlotAtHead === i}
+                isQueued={playbackIndices.includes(i)}
                 counterRotation={counterRotation}
                 onClick={() => {
                   if (state.slots[i] !== null && state.slots[i] === state.selectedStone) {

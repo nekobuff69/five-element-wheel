@@ -5,6 +5,7 @@ interface SlotProps {
   index: number;
   element: ElementType | null;
   isAtHead: boolean;
+  isQueued: boolean;
   counterRotation: number;
   onClick?: () => void;
   onPointerDown?: (e: React.PointerEvent) => void;
@@ -15,13 +16,13 @@ interface SlotProps {
   isDraggedAway?: boolean;
 }
 
-function Slot({ index, element, isAtHead, counterRotation, onClick, onPointerDown, mode, isDimmed, isCurrentlyPlaying, isSnapTarget, isDraggedAway }: SlotProps) {
+function Slot({ index, element, isAtHead, isQueued, counterRotation, onClick, onPointerDown, mode, isDimmed, isCurrentlyPlaying, isSnapTarget, isDraggedAway }: SlotProps) {
   const displayElement = isDraggedAway ? null : element;
   const className = [
     'slot',
     displayElement ? 'slot--filled' : 'slot--empty',
-    isAtHead ? 'slot--at-head' : '',
-    isAtHead && displayElement && mode === 'winding' ? 'slot--glow' : '',
+    isQueued ? 'slot--queued' : '',
+    isAtHead && !isQueued && displayElement && mode === 'winding' ? 'slot--approaching' : '',
     isSnapTarget ? 'slot--glow' : '',
     isCurrentlyPlaying ? 'slot--playing' : '',
     isDimmed ? 'slot--dimmed' : '',
