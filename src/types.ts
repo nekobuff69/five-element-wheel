@@ -1,6 +1,6 @@
 export type ElementType = 'earth' | 'metal' | 'wood' | 'fire' | 'water';
 
-export type WheelMode = 'ready' | 'winding' | 'tack' | 'springBack';
+export type WheelMode = 'ready' | 'winding' | 'springBack';
 
 export type WindDirection = 'cw' | 'ccw';
 
@@ -25,7 +25,7 @@ export type WheelAction =
   | { type: 'CLEAR_ALL' }
   | { type: 'WIND'; delta: number }
   | { type: 'RELEASE' }
-  | { type: 'TACK' }
+  | { type: 'COMPLETE' }
   | { type: 'COMPLETE' }
   | { type: 'SET_BPM'; bpm: number }
   | { type: 'SET_LOOP'; loop: boolean }

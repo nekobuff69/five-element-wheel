@@ -129,12 +129,6 @@ describe('PLACE_STONE', () => {
     expect(s).toBe(wind);
   });
 
-  it('rejects placement in tack mode', () => {
-    const tacked = wheelReducer(cw(select(initialWheelState, 'earth'), 36), { type: 'TACK' });
-    expect(tacked.mode).toBe('tack');
-    const s = wheelReducer(tacked, { type: 'PLACE_STONE', slotIndex: 3 });
-    expect(s).toBe(tacked);
-  });
 // ============================================================ REMOVE_STONE
 
 describe('REMOVE_STONE', () => {
@@ -160,20 +154,11 @@ describe('REMOVE_STONE', () => {
     expect(s.slots[7]).toBeNull();
   });
 
-  it.each(['winding', 'tack'] as const)(
-    'is no-op in %s mode',
-    (mode) => {
-      const placed = place(select(initialWheelState, 'metal'), 2);
-      let s = placed;
-      if (mode === 'winding') {
-        s = cw(s, 36);
-      } else {
-        s = cw(s, 36);
-        s = wheelReducer(s, { type: 'TACK' });
-      }
-      expect(wheelReducer(s, { type: 'REMOVE_STONE', slotIndex: 2 })).toBe(s);
-    },
-  );
+  it('is no-op in winding mode', () => {
+    const placed = place(select(initialWheelState, 'metal'), 2);
+    const s = cw(placed, 36);
+    expect(wheelReducer(s, { type: 'REMOVE_STONE', slotIndex: 2 })).toBe(s);
+  });
 
   it('only removes the specified slot, not others', () => {
     let s = select(initialWheelState, 'earth');
@@ -413,11 +398,6 @@ describe('RELEASE', () => {
     expect(s.mode).toBe('springBack');
   });
 
-  it('transitions tack to springBack', () => {
-    const tacked = wheelReducer(cw(initialWheelState, 36), { type: 'TACK' });
-    const s = wheelReducer(tacked, { type: 'RELEASE' });
-    expect(s.mode).toBe('springBack');
-  });
 
   it('preserves queuedSlotIndices on release', () => {
     const wind = cw(cw(initialWheelState, 36), 36);
@@ -436,27 +416,6 @@ describe('RELEASE', () => {
   );
 });
 
-// =================================================================== TACK
-
-describe('TACK', () => {
-  it('transitions winding to tack', () => {
-    const s = wheelReducer(cw(initialWheelState, 36), { type: 'TACK' });
-    expect(s.mode).toBe('tack');
-  });
-
-  it('clears currentSlotAtHead on tack', () => {
-    const s = wheelReducer(cw(initialWheelState, 36), { type: 'TACK' });
-    expect(s.currentSlotAtHead).toBeNull();
-  });
-
-  it.each(['ready', 'tack', 'springBack'] as const)(
-    'is no-op in %s mode',
-    (mode) => {
-      const state = createState({ mode, direction: 'cw' });
-      expect(wheelReducer(state, { type: 'TACK' })).toBe(state);
-    },
-  );
-});
 
 // =============================================================== COMPLETE
 
@@ -491,7 +450,7 @@ describe('COMPLETE', () => {
     expect(s.bpm).toBe(180);
   });
 
-  it.each(['ready', 'winding', 'tack'] as const)(
+  it.each(['ready', 'winding'] as const)(
     'is no-op in %s mode',
     (mode) => {
       const state = createState({ mode, direction: mode === 'winding' ? 'cw' : null });
@@ -672,17 +631,6 @@ describe('full cycles', () => {
     expect(completed.currentSlotAtHead).toBeNull();
   });
 
-  it('ready → CCW wind → tack → release → complete returns to ready (loop=false)', () => {
-    const wind = ccw(initialWheelState, 36);
-    expect(wind.mode).toBe('winding');
-    const tacked = wheelReducer(wind, { type: 'TACK' });
-    expect(tacked.mode).toBe('tack');
-    const released = wheelReducer(tacked, { type: 'RELEASE' });
-    expect(released.mode).toBe('springBack');
-    const noLoop = wheelReducer(released, { type: 'SET_LOOP', loop: false });
-    const completed = wheelReducer(noLoop, { type: 'COMPLETE' });
-    expect(completed.mode).toBe('ready');
-  });
 });
 
 // ============================================================== edge cases

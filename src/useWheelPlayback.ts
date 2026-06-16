@@ -9,24 +9,33 @@ export function useWheelPlayback(
   springBackPlayingIndex: number;
   playbackRef: React.MutableRefObject<PlaybackControl | null>;
 } {
-  const prevModeRef = useRef(state.mode);
+  const prevRotationRef = useRef(state.rotation);
+  const tackPlayedRef = useRef(false);
   const playbackRef = useRef<PlaybackControl | null>(null);
   const [springBackPlayingIndex, setSpringBackPlayingIndex] = useState(-1);
 
-  // Tack detection: rotation reaches 360° → dispatch TACK
+  // Tack detection: rotation crosses 360° threshold during winding → play sound
   useEffect(() => {
-    if (state.mode === 'winding' && Math.abs(state.rotation) >= 360) {
-      dispatch({ type: 'TACK' });
+    if (state.mode === 'winding') {
+      const absRotation = Math.abs(state.rotation);
+      const prevAbsRotation = Math.abs(prevRotationRef.current);
+      // Crossed 360° threshold (going up)
+      if (absRotation >= 360 && prevAbsRotation < 360) {
+        if (!tackPlayedRef.current) {
+          playTackSound();
+          tackPlayedRef.current = true;
+        }
+      }
+      // Reset when rotation drops below 360° (user released early or direction changed)
+      if (absRotation < 360) {
+        tackPlayedRef.current = false;
+      }
+    } else {
+      // Reset tack flag when not winding
+      tackPlayedRef.current = false;
     }
-  }, [state.mode, state.rotation, dispatch]);
-
-  // Tack sound: play when entering tack mode (not staying in it)
-  useEffect(() => {
-    if (state.mode === 'tack' && prevModeRef.current !== 'tack') {
-      playTackSound();
-    }
-    prevModeRef.current = state.mode;
-  }, [state.mode]);
+    prevRotationRef.current = state.rotation;
+  }, [state.mode, state.rotation]);
 
   // Spring-back playback: start on springBack, cancel on cleanup
   useEffect(() => {

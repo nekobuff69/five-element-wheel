@@ -153,7 +153,7 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
     }
 
     case 'RELEASE': {
-      if (state.mode !== 'winding' && state.mode !== 'tack') return state;
+      if (state.mode !== 'winding') return state;
 
       // Capture the approaching slot if it's close to the head
       let finalQueued = state.queuedSlotIndices;
@@ -175,16 +175,6 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
         queuedSlotIndices: finalQueued,
       };
     }
-
-    case 'TACK': {
-      if (state.mode !== 'winding') return state;
-      return {
-        ...state,
-        mode: 'tack',
-        currentSlotAtHead: null,
-      };
-    }
-
     case 'COMPLETE': {
       if (state.mode !== 'springBack') return state;
       return {

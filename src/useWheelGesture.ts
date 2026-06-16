@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import type { WheelMode } from './types';
 
 const DRAG_THRESHOLD = 5;
+const SPRINGBACK_COMMIT_THRESHOLD = 15;
 
 function getAngle(centerX: number, centerY: number, px: number, py: number): number {
   return Math.atan2(py - centerY, px - centerX) * (180 / Math.PI);
@@ -23,6 +24,7 @@ export function useWheelGesture(
   const lastAngleRef = useRef<number | null>(null);
   const dragStartedRef = useRef(false);
   const accumulatedMovementRef = useRef(0);
+  const springBackAccumulatedRef = useRef(0);
 
   // Keep callbacks and mode in refs to avoid re-binding listeners
   const modeRef = useRef(mode);
@@ -46,6 +48,7 @@ export function useWheelGesture(
     isDraggingRef.current = true;
     dragStartedRef.current = false;
     accumulatedMovementRef.current = 0;
+    springBackAccumulatedRef.current = 0;
   }, [wheelRef]);
 
   const handlePointerMove = useCallback((e: PointerEvent) => {
@@ -60,6 +63,15 @@ export function useWheelGesture(
     const rawDelta = currentAngle - lastAngleRef.current;
     const delta = normalizeDelta(rawDelta);
     lastAngleRef.current = currentAngle;
+    if (modeRef.current === 'springBack') {
+      if (delta !== 0) {
+        springBackAccumulatedRef.current += Math.abs(delta);
+        if (springBackAccumulatedRef.current >= SPRINGBACK_COMMIT_THRESHOLD) {
+          onWindRef.current(delta);
+        }
+      }
+      return;
+    }
     if (!dragStartedRef.current) {
       accumulatedMovementRef.current += Math.abs(delta);
       if (accumulatedMovementRef.current >= DRAG_THRESHOLD) {
@@ -79,12 +91,18 @@ export function useWheelGesture(
     if (container) {
       container.releasePointerCapture(e.pointerId);
     }
+    const mode = modeRef.current;
     const wasDragStarted = dragStartedRef.current;
     isDraggingRef.current = false;
     lastAngleRef.current = null;
     dragStartedRef.current = false;
     accumulatedMovementRef.current = 0;
-    if (wasDragStarted) {
+    if (mode === 'springBack') {
+      if (springBackAccumulatedRef.current >= SPRINGBACK_COMMIT_THRESHOLD) {
+        onReleaseRef.current();
+      }
+      springBackAccumulatedRef.current = 0;
+    } else if (wasDragStarted) {
       onReleaseRef.current();
     }
   }, [wheelRef]);

@@ -50,7 +50,22 @@ body {
   cursor: grabbing;
 }
 
-.wheel-container--tack {
+.wheel-container--ready {
+  /* Default state - neutral ring */
+}
+
+.wheel-container--winding .wheel {
+  border-color: rgba(255, 255, 255, 0.3);
+  transition: border-color 0.2s;
+}
+
+.wheel-container--spring-back .wheel {
+  border-color: rgba(74, 144, 217, 0.4);
+  box-shadow: 0 0 20px rgba(74, 144, 217, 0.2);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.wheel-container--tack-flash {
   animation: tack-bounce 0.3s ease-out;
 }
 
@@ -323,4 +338,16 @@ body {
 
 .stone-ghost--fading {
   opacity: 0;
+}
+
+.wheel-hint {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  margin-top: 8px;
+  animation: hint-fade-in 0.3s ease-out;
+}
+@keyframes hint-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

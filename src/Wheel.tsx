@@ -3,7 +3,7 @@ import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
 import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE } from './geometry';
 import Slot from './Slot';
 import Head from './Head';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useWheelGesture } from './useWheelGesture';
 import { useWheelPlayback } from './useWheelPlayback';
 import { useSlotDrag } from './useSlotDrag';
@@ -36,6 +36,26 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
     snapTargetSlot: slotDragSnapTarget,
     handleSlotPointerDown,
   } = useSlotDrag(dispatch);
+  const [showTackFlash, setShowTackFlash] = useState(false);
+  const [showHint, setShowHint] = useState(state.slots.every(s => s === null));
+
+  useEffect(() => {
+    if (state.mode === 'winding' && Math.abs(state.rotation) >= 360) {
+      setShowTackFlash(true);
+      const timer = setTimeout(() => setShowTackFlash(false), 300);
+      return () => clearTimeout(timer);
+    }
+    if (state.mode !== 'winding') {
+      setShowTackFlash(false);
+    }
+  }, [state.rotation, state.mode]);
+
+  useEffect(() => {
+    if (state.mode === 'winding') {
+      setShowHint(false);
+    }
+  }, [state.mode]);
+
 
 
   function getWheelStyle(): React.CSSProperties {
@@ -59,9 +79,9 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
     if (playbackRef.current) return;
     dispatch({ type: 'COMPLETE' });
   }
-  return (
+  return (<>
     <div
-      className={`wheel-container${state.mode === 'tack' ? ' wheel-container--tack' : ''}`}
+      className={`wheel-container wheel-container--${state.mode}${showTackFlash ? ' wheel-container--tack-flash' : ''}`}
       ref={wheelRef}
     >
       <div
@@ -132,7 +152,10 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
         </div>
       )}
     </div>
-  );
+      {showHint && state.mode === 'ready' && (
+        <div className="wheel-hint">将石头拖入槽位，然后转动轮盘播放</div>
+      )}
+  </>);
 }
 
 export default Wheel;
