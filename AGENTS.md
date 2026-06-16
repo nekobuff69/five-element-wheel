@@ -10,7 +10,7 @@ The triage state machine uses the default label vocabulary (`needs-triage`, `nee
 
 ### Domain docs
 
-- **`CONTEXT.md`** — ubiquitous language glossary: instrument anatomy (wheel, slot, head, stone, palette, ghost stone, snap target), elements and notes (Earth/root, Metal/M2, Wood/M3, Fire/P5, Water/M6), wheel state machine (READY→WINDING→TACK→SPRING_BACK→COMPLETE), performance concepts (spring-back, loop, loop iteration, hot reload, key, octave, frequency computation, queued slots, play order, beat grid, tack sound, early release, stone drag, snap).
+- **`CONTEXT.md`** — ubiquitous language glossary: instrument anatomy (wheel, slot, head, stone, palette, ghost stone, snap target), elements and notes (Earth/root, Metal/M2, Wood/M3, Fire/P5, Water/M6), wheel state machine (READY→WINDING→SPRING_BACK→COMPLETE), performance concepts (spring-back, loop, loop iteration, hot reload, key, octave, frequency computation, queued slots, play order, beat grid, tack sound, early release, stone drag, snap).
 - **`docs/adr/`** — architecture decision records:
   - `0001-use-reducer-state-machine.md` — useReducer with pure reducer, 111 tests
   - `0002-css-transform-rotation.md` — CSS transforms for winding + spring-back
@@ -42,16 +42,16 @@ src/
   types.ts                     — ElementType, WheelState, WheelAction, element data (colors, symbols, intervals), KEY_NAMES
   frequencies.ts               — getElementFrequencies() pure music theory (key + octave → Hz)
   wheelReducer.ts              — pure reducer + initialWheelState + helpers (handles SET_KEY, SET_OCTAVE)
-  wheelReducer.test.ts         — 88 unit tests (state machine + actions + key/octave)
+  wheelReducer.test.ts         — 102 unit tests (state machine + actions + key/octave)
   playback.ts                  — AudioContext singleton, tack sound, rAF-synced scheduling engine with hot reload
   playback.test.ts             — 23 unit tests (updateSlots behavior + frequencies)
-  useWheelGesture.ts           — pointer-drag gesture hook (angular delta + threshold)
+  useWheelGesture.ts           — pointer-drag gesture hook (angular delta + threshold + springBack commit threshold)
   useWheelPlayback.ts          — hook: tack detection/sound, spring-back playback lifecycle, hot-reload sync
   geometry.ts                  — getSlotPosition(), findSnapTarget(), geometry constants (slot angles, orbit radius)
   Wheel.tsx                    — render component: gesture hook + playback hook → dispatch + visual layout
   Slot.tsx                     — empty/filled/glow/dim/snap-target states
   Head.tsx                     — fixed marker at 6 o'clock
-  StonePalette.tsx             — 5 stone circles + Clear + stone drag gesture via geometry.findSnapTarget()
+  StonePalette.tsx             — 5 stone circles + Reset + stone drag gesture via geometry.findSnapTarget()
   LoopToggle.tsx               — checkbox toggle for loop enabled/disabled
   BPMControl.tsx               — Key selector (12 notes) + Octave selector (-2..+2) + BPM slider (60-180)
   index.css                    — all styles
@@ -66,17 +66,21 @@ src/
 - CSS transition and audio scheduling fire in the same useEffect frame.
 - AudioContext auto-resumes on first audio-producing action (tack sound or spring-back playback).
 - Pointer events gated by mode: wheel drag accepts `ready`, `winding`, `springBack`. Stone placement accepts `ready`, `springBack`.
+- Wheel drag during springBack requires 15° commit threshold to prevent accidental loop interruption
+- Tack sound plays when rotation crosses 360° during winding (derived value, not a mode transition)
 - `PLACE_STONE` uses `action.element` if provided (stone drag), else `state.selectedStone` (click-to-place).
-- `CLEAR_ALL` valid in any mode — full reset including queued slots and mode.
+- `RESET` valid in any mode — full reset to initialWheelState (slots, rotation, direction, bpm, loop, key, octave, selectedStone)
 - `WIND` during `springBack` interrupts loop, resets queued indices for fresh wind cycle.
 - Stone drag uses document-level pointer events (not container-level) to avoid gesture blocking.
 - `WIND` resets rotation baseline to 0 when transitioning from `springBack` (CSS already animated to 0°)
-- `RELEASE` captures approaching slot if within 10° of head (matches visual glow expectation)
+- Only queued slots glow during winding (`slot--queued` class); approaching slot has no special styling
 - Playback handles looping internally: pre-schedules 4 iterations, extends dynamically, no gaps between loops
 - Snap detection uses `findSnapTarget()` in `geometry.ts`, which computes rotated slot positions via `getSlotPosition()` and finds the nearest within threshold.
 - `PlaybackControl.updateSlots()` cancels future oscillators (beats ≥ currentBeat), re-schedules with new elements. Already-played beats unchanged.
 - Ghost stone fades out over 200ms on pointer up via CSS transition + setTimeout cleanup.
 - Key is stored as a 12-tone chromatic name (`C`, `C#`, …, `B`) in `state.key`. Pentatonic intervals preserved across all keys.
-- Octave is stored as an integer -2..+2 in `state.octave`. All frequencies multiplied by 2^octave.
-- Default BPM is 180, default key is 'C', default octave is 0.
+- Octave is stored as an integer 3..8 in `state.octave`. All frequencies multiplied by 2^octave.
+- Default BPM is 180, default key is 'F', default octave is 5.
 - `COMPLETE` preserves `state.key` and `state.octave` along with slots, selectedStone, BPM.
+- First-use hint shown when all slots empty and mode is ready; dismissed on first WIND action
+- Stone removal: click a filled slot with matching selectedStone to remove, or drag stone off wheel to remove (useSlotDrag hook)
