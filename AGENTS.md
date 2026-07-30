@@ -21,6 +21,7 @@ The triage state machine uses the default label vocabulary (`needs-triage`, `nee
   - `0007-raf-sync-audio-visual.md` — rAF + AudioContext clock for visual sync
   - `0008-loop-playback-architecture.md` — pure audio loop with hot reload
   - `0009-stone-drag-gesture.md` — document-level pointer events + snap-to-slot
+  - `0010-springback-commit-threshold.md` — 15° commit threshold for springBack drag to prevent accidental loop interruption
 
 ### Tech stack
 
