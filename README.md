@@ -172,7 +172,7 @@ A 15° commit threshold on wheel drag prevents accidental loop interruption duri
 ### Clone and Run
 
 ```bash
-git clone https://github.com/your-username/five-element-wheel
+git clone https://github.com/nekobuff69/five-element-wheel
 cd five-element-wheel
 bun install
 bun dev
