@@ -1,14 +1,14 @@
 # Five-Element Wheel · 五行轮盘
 
-A digital art instrument that turns the Chinese five elements (五行 / wǔ xíng) into music. Place colored stones on a rotating wheel, drag to queue a sequence, release to play — any arrangement sounds consonant.
+The Chinese five elements (五行 / wǔ xíng) mapped to a pentatonic scale. Place colored stones on a rotating wheel, drag to queue a sequence, release to play. Every combination of stones produces a consonant melody.
 
-Built around the pentatonic scale (五音 / wǔ yīn): **Earth** (root), **Metal** (M2), **Wood** (M3), **Fire** (P5), **Water** (M6). The intervals form a perfect pentatonic scale in any key — you cannot make a "wrong" note.
+Built around the pentatonic scale (五音 / wǔ yīn): **Earth** (root), **Metal** (M2), **Wood** (M3), **Fire** (P5), **Water** (M6). The intervals form a pentatonic scale in any key. No wrong notes.
 
 ---
 
 ## Concept
 
-五行 (Five Elements) is an ancient Chinese philosophy describing the five fundamental phases of the natural world:
+五行 (Five Elements) is an ancient Chinese philosophy describing five phases of the natural world:
 
 | Element | Character | Note (key=C) | Color |
 |---------|-----------|--------------|-------|
@@ -18,9 +18,9 @@ Built around the pentatonic scale (五音 / wǔ yīn): **Earth** (root), **Metal
 | Fire (火) | Energy, flame | P5 (徵 / Sol) | `#E53935` |
 | Water (水) | Flow, adaptability | M6 (羽 / La) | `#1E88E5` |
 
-These five elements map to the five notes of the Chinese pentatonic scale (五音). The intervals are consonant in every key — any combination of stones on the wheel produces a harmonious melody.
+These five elements map to the five notes of the Chinese pentatonic scale (五音). The intervals are consonant in every key.
 
-**Intentions:** This project explores gesture-as-composition. The wheel is not a sequencer grid or a piano roll — it's a physical metaphor. Drag to queue, release to play, loop and re-shape in real time. The constraint (five notes, ten slots, one wheel) creates a space for meditative, improvisational music-making.
+**Intentions:** The wheel is a physical metaphor for composing with gestures. Drag to queue, release to play, loop and re-shape in real time. Five notes, ten slots, one wheel.
 
 ---
 
@@ -28,14 +28,14 @@ These five elements map to the five notes of the Chinese pentatonic scale (五�
 
 ### Mobile-First, Gesture-Driven
 
-The app is designed for touch from the ground up. All interactions work with drag and tap — no keyboard shortcuts required.
+The app is designed for touch. All interactions work with drag and tap, no keyboard shortcuts required.
 
 #### 1. Place Stones
 
 Two ways to place a stone in a slot:
 
-- **Tap-to-place:** Tap a stone in the palette to select it (white glow), then tap any empty slot
-- **Drag-to-place:** Drag a stone from the palette onto a slot — a ghost stone follows your finger, snaps to the nearest slot within 30px
+- **Tap-to-place:** Tap a stone in the palette to select it (white glow), then tap any empty slot.
+- **Drag-to-place:** Drag a stone from the palette onto a slot. A ghost stone follows your finger and snaps to the nearest slot within 30px.
 
 | Empty slot | Slot with stone |
 |------------|----------------|
@@ -45,31 +45,28 @@ To **remove** a stone: tap a filled slot while the matching stone is selected, o
 
 #### 2. Wind the Wheel
 
-Drag the wheel clockwise or counter-clockwise. As each slot crosses the fixed **Head** at 6 o'clock, it becomes **queued** — the slot glows to confirm capture. The order of capture determines the play order.
+Drag the wheel clockwise or counter-clockwise. As each slot crosses the fixed **Head** at 6 o'clock, it becomes **queued** and glows to confirm capture. The order of capture determines the play order.
 
 | What you see | What it means |
 |--------------|---------------|
-| Strong glow on a slot | Slot is queued — will play |
+| Strong glow on a slot | Slot is queued, will play |
 | No glow on approaching slot | Not yet captured |
 
-Drag further to queue more slots. Drag a full rotation (360°) to queue all 10 — a **tack sound** (noise burst + sine blip) confirms you've reached the limit. The wheel is capped at ±360°.
+Drag further to queue more slots. A full rotation (360°) queues all 10. A **tack sound** (noise burst + sine blip) confirms you've reached the limit. The wheel is capped at ±360°.
 
 #### 3. Release to Play
 
 Release the wheel. It **springs back** to its rest position while playing queued slots in encounter order:
 
-- Each slot plays for one beat at the current BPM
-- Empty slots are rests — the beat grid is always maintained
-- Spring-back duration = `queuedSlots × (60 ÷ BPM)` seconds
+- Each slot plays for one beat at the current BPM.
+- Empty slots are rests. The beat grid is always maintained.
+- Spring-back duration = `queuedSlots × (60 ÷ BPM)` seconds.
 
-The **Head** shows the currently playing stone icon, and non-playing filled slots dim.
+The **Head** shows the currently playing stone icon. Non-playing filled slots dim.
 
 #### 4. Loop Mode
 
-With **Loop** enabled (default), the melody repeats seamlessly:
-- No gaps between iterations — playback pre-schedules multiple cycles and extends dynamically
-- **Edit during playback:** Drag new stones into slots or remove existing ones — changes apply to all future beats immediately (hot reload)
-- The wheel stays at rest during loop
+With **Loop** enabled (default), the melody repeats seamlessly. Playback pre-schedules multiple cycles and extends dynamically. You can edit stones during playback -- drag new ones into slots or remove existing ones. Changes apply to all future beats immediately (hot reload). The wheel stays at rest during loop.
 
 #### 5. Interrupt the Loop
 
@@ -81,17 +78,17 @@ Drag the wheel during playback to interrupt the current sequence and queue a new
 |---------|-------|---------|-------------|
 | **Key** | C, C#, D, …, B | F | Root note of the pentatonic scale |
 | **Octave** | 3 – 8 | 5 | Transposition for all frequencies |
-| **BPM** | 60 – 180 | 180 | Tempo — controls playback speed |
-| **Loop** | On / Off | On | Toggle seamless melody repetition |
+| **BPM** | 60 – 180 | 180 | Tempo, controls playback speed |
+| **Loop** | On / Off | On | Toggle melody repetition |
 | **Reset** | Button | — | Restore app to clean initial state |
 
-All controls are usable during playback.
+All controls work during playback.
 
 ---
 
 ## Visual Design
 
-Dark-themed with glow-based feedback for slot states:
+Dark background with glow-based slot state feedback:
 
 | Class | Purpose |
 |-------|---------|
@@ -114,7 +111,7 @@ The ghost stone follows the cursor during stone drag and fades out on release ov
 | Empty wheel with hint | ![Empty](screenshots/01-empty.png) |
 | Stones placed in slots | ![Stones placed](screenshots/02-stones-placed.png) |
 | Wheel winding, slots queued | ![Winding](screenshots/03-winding.png) |
-| Full rotation — tack threshold | ![Tack flash](screenshots/04-tack-flash.png) |
+| Full rotation, tack threshold | ![Tack flash](screenshots/04-tack-flash.png) |
 | Spring-back playback | ![Playing](screenshots/05-playing.png) |
 
 ---
@@ -124,13 +121,13 @@ The ghost stone follows the cursor during stone drag and fades out on release ov
 | Layer | Technology |
 |-------|-----------|
 | Framework | Vite + React 18 + TypeScript (strict mode) |
-| State | Single `useReducer` — no external library |
+| State | Single `useReducer`, no external library |
 | Audio | Native Web Audio API (OscillatorNode triangle wave + GainNode pluck envelope) |
 | Styling | Plain CSS with custom properties, BEM naming |
-| Interaction | Raw pointer events — angular-only drag for wheel, document-level for stone drag |
+| Interaction | Raw pointer events, angular-only drag for wheel, document-level for stone drag |
 | Rotation | CSS `transform: rotate()` with inline transition override for spring-back |
 | PWA | `vite-plugin-pwa` with workbox `generateSW`, offline precache |
-| Testing | Vitest + jsdom — 107 tests, 204 assertions |
+| Testing | Vitest + jsdom, 107 tests, 204 assertions |
 
 ### Architecture (flat `src/`)
 
@@ -158,11 +155,11 @@ src/
 
 ### Key Architecture Decisions
 
-- **State machine with 3 modes:** `ready` → `winding` → `springBack`. Tack is a derived value (rotation ≥ 360°), not a mode.
-- **Pure reducer:** All state transitions are deterministic, testable functions. No side effects in the reducer.
-- **Audio clock synced to rAF:** Beat timing computed from `AudioContext.currentTime`, visual updates driven by `requestAnimationFrame`.
-- **Hot reload during loop:** `PlaybackControl.updateSlots()` cancels future scheduled oscillators and re-schedules with new elements. Already-played beats remain unchanged.
-- **Commit threshold:** 15° drag required during springBack to interrupt the loop — prevents accidental interruption during stone editing.
+The state machine has 3 modes: `ready` → `winding` → `springBack`. Tack is derived from rotation (≥ 360°), not stored as a mode. All state transitions go through a pure reducer: deterministic, testable, no side effects.
+
+Audio timing comes from `AudioContext.currentTime`, synced to the visual frame loop via `requestAnimationFrame`. During loop playback, `PlaybackControl.updateSlots()` cancels future oscillators and re-schedules with new elements. This means stone edits during playback take effect on the next beat. Already-played beats are left alone.
+
+A 15° commit threshold on wheel drag prevents accidental loop interruption during stone editing. You have to drag deliberately past that angle before the interrupt fires.
 
 ---
 
@@ -222,13 +219,7 @@ Output goes to `dist/`. The build produces a fully offline-capable PWA with serv
 
 ### Testing Philosophy
 
-The test suite (107 tests, 204 assertions) focuses on:
-
-- **Reducer purity:** Every state transition is tested in isolation — no component, no audio context
-- **Edge cases:** Mode guards, direction changes, empty slots, boundary conditions
-- **Playback logic:** `updateSlots()` behavior with hot reload, timing calculations, frequency correctness
-
-Run the full suite with:
+The test suite covers three areas: reducer purity (state transitions in isolation, no components or audio context), edge cases (mode guards, direction changes, empty slots, boundary conditions), and playback logic (updateSlots behavior with hot reload, timing calculations, frequency correctness).
 
 ```bash
 bun test
@@ -238,19 +229,9 @@ bun test
 
 ## Project Status
 
-This is a digital art exploration piece — not a product, not a DAW, not a game. It's complete as a standalone instrument and open for anyone to build on.
+A hobby project. A musical gadget that makes nice sounds when you drag stones around a wheel. Not a proper instrument with expectations. Just something to play with, zero pressure.
 
-### What it is
-
-- A constraint-based composition tool
-- A gesture-to-music interface
-- A visual exploration of the five-element philosophy
-
-### What it is not
-
-- A full music production environment
-- A game with scoring or goals
-- A puzzle with right/wrong answers
+If you want to build on it, go ahead.
 
 ---
 
