@@ -24,6 +24,12 @@ These five elements map to the five notes of the Chinese pentatonic scale (五�
 
 ---
 
+## Demo
+
+[![Demo](https://raw.githubusercontent.com/nekobuff69/five-element-wheel/main/docs/demo/preview.gif)](https://streamable.com/t728g0)
+
+---
+
 ## Features & User Experience
 
 ### Mobile-First, Gesture-Driven
@@ -84,29 +90,6 @@ Drag the wheel during playback to interrupt the current sequence and queue a new
 
 All controls work during playback.
 
----
-
-## Visual Design
-
-Dark background with glow-based slot state feedback:
-
-| Class | Purpose |
-|-------|---------|
-| `slot--queued` | Strong glow on captured slots during winding |
-| `slot--playing` | Bright glow on currently-playing slot |
-| `slot--dimmed` | Dimmed non-playing filled slots during spring-back |
-| `slot--glow` | Snap target highlight during stone drag |
-| `wheel-container--winding` | Wheel border brightens during drag |
-| `wheel-container--spring-back` | Blue-tinted glow during playback |
-| `wheel-container--tack-flash` | Brief bounce animation at 360° |
-
-The ghost stone follows the cursor during stone drag and fades out on release over 200ms.
-
----
-
-## Demo
-
-[![Demo](https://raw.githubusercontent.com/nekobuff69/five-element-wheel/main/docs/demo/preview.gif)](https://streamable.com/t728g0)
 ---
 
 ## Technical Stack
