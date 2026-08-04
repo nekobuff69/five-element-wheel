@@ -104,15 +104,9 @@ The ghost stone follows the cursor during stone drag and fades out on release ov
 
 ---
 
-## Screenshots
+## Demo
 
-<div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
-  <img src="screenshots/01-empty.png" width="160" alt="Empty wheel" />
-  <img src="screenshots/02-stones-placed.png" width="160" alt="Stones placed" />
-  <img src="screenshots/03-winding.png" width="160" alt="Winding" />
-</div>
-
-Watch the demo: [five-element-wheel-demo.mp4](demo/five-element-wheel-demo.mp4)
+<div style="position:relative; width:100%; height:0px; padding-bottom:222.222%"><iframe allow="fullscreen" allowfullscreen height="100%" src="https://streamable.com/e/t728g0?" width="100%" style="border:none; width:100%; height:100%; position:absolute; left:0px; top:0px; overflow:hidden;"></iframe></div>
 ---
 
 ## Technical Stack
