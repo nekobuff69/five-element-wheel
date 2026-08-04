@@ -28,6 +28,8 @@ These five elements map to the five notes of the Chinese pentatonic scale (äº”éŸ
 
 [![Demo](https://raw.githubusercontent.com/nekobuff69/five-element-wheel/main/docs/demo/preview.gif)](https://streamable.com/t728g0)
 
+[Watch live demo with audio on Streamable](https://streamable.com/t728g0)
+
 ---
 
 ## Features & User Experience
