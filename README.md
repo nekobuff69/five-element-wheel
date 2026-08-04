@@ -106,14 +106,28 @@ The ghost stone follows the cursor during stone drag and fades out on release ov
 
 ## Screenshots
 
-| State | Preview |
-|-------|---------|
-| Empty wheel with hint | ![Empty](screenshots/01-empty.png) |
-| Stones placed in slots | ![Stones placed](screenshots/02-stones-placed.png) |
-| Wheel winding, slots queued | ![Winding](screenshots/03-winding.png) |
-| Full rotation, tack threshold | ![Tack flash](screenshots/04-tack-flash.png) |
-| Spring-back playback | ![Playing](screenshots/05-playing.png) |
-
+<div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;">
+  <figure style="margin: 0; text-align: center;">
+    <img src="screenshots/01-empty.png" width="160" alt="Empty wheel with hint" />
+    <figcaption style="font-size: 12px; color: #888;">Empty wheel with hint</figcaption>
+  </figure>
+  <figure style="margin: 0; text-align: center;">
+    <img src="screenshots/02-stones-placed.png" width="160" alt="Stones placed in slots" />
+    <figcaption style="font-size: 12px; color: #888;">Stones placed in slots</figcaption>
+  </figure>
+  <figure style="margin: 0; text-align: center;">
+    <img src="screenshots/03-winding.png" width="160" alt="Wheel winding, slots queued" />
+    <figcaption style="font-size: 12px; color: #888;">Wheel winding, slots queued</figcaption>
+  </figure>
+  <figure style="margin: 0; text-align: center;">
+    <img src="screenshots/04-tack-flash.png" width="160" alt="Full rotation, tack threshold" />
+    <figcaption style="font-size: 12px; color: #888;">Full rotation, tack threshold</figcaption>
+  </figure>
+  <figure style="margin: 0; text-align: center;">
+    <img src="screenshots/05-playing.png" width="160" alt="Spring-back playback" />
+    <figcaption style="font-size: 12px; color: #888;">Spring-back playback</figcaption>
+  </figure>
+</div>
 ---
 
 ## Technical Stack
