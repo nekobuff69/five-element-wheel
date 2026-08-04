@@ -111,6 +111,8 @@ The ghost stone follows the cursor during stone drag and fades out on release ov
   <img src="screenshots/02-stones-placed.png" width="160" alt="Stones placed" />
   <img src="screenshots/03-winding.png" width="160" alt="Winding" />
 </div>
+
+Watch the demo: [five-element-wheel-demo.mp4](demo/five-element-wheel-demo.mp4)
 ---
 
 ## Technical Stack
