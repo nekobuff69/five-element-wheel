@@ -26,9 +26,9 @@ These five elements map to the five notes of the Chinese pentatonic scale (五�
 
 ## Demo
 
-[![Demo](https://raw.githubusercontent.com/nekobuff69/five-element-wheel/main/docs/demo/preview.gif)](https://streamable.com/t728g0)
+[![Demo](https://raw.githubusercontent.com/nekobuff69/five-element-wheel/main/docs/demo/preview.gif)](https://streamable.com/lpduul)
 
-[Watch live demo with audio on Streamable](https://streamable.com/t728g0)
+**▶ Full demo — 74s, with sound:** [Streamable](https://streamable.com/lpduul) (online, expires after 90 days) · [repo MP4](docs/demo/demo.mp4) (permanent)
 
 ---
 
