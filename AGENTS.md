@@ -10,6 +10,8 @@ The triage state machine uses the default label vocabulary (`needs-triage`, `nee
 
 ### Domain docs
 
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
 - **`CONTEXT.md`** — ubiquitous language glossary: instrument anatomy (wheel, slot, head, stone, palette, ghost stone, snap target), elements and notes (Earth/root, Metal/M2, Wood/M3, Fire/P5, Water/M6), wheel state machine (READY→WINDING→SPRING_BACK→COMPLETE), performance concepts (spring-back, loop, loop iteration, hot reload, key, octave, frequency computation, queued slots, play order, beat grid, tack sound, early release, stone drag, snap).
 - **`docs/adr/`** — architecture decision records:
   - `0001-use-reducer-state-machine.md` — useReducer with pure reducer, 111 tests
