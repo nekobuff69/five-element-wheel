@@ -36,6 +36,7 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/do
 - **PWA**: `vite-plugin-pwa` with workbox `generateSW`, offline precache, iOS meta tags
 - **Testing**: Vitest + jsdom, 111 tests (`src/wheelReducer.test.ts`, `src/playback.test.ts`)
 - **Package manager**: bun 1.3+
+- **Deployment**: Cloudflare Pages (Git integration, classic Pages project) — push to `main` builds with `npm install -g bun && bun install --frozen-lockfile && bun run build`, output `dist`, live at https://five-element-wheel.pages.dev/; other branches get preview deployments. Vite `base` must stay `/` (serves at domain root). GitHub Pages workflow removed in the cutover.
 
 ### File structure (flat)
 
