@@ -31,9 +31,11 @@ function App() {
         <button
           type="button"
           className="guide-trigger"
+          aria-label="玩法"
+          title="玩法"
           onClick={() => setGuideOpen(true)}
         >
-          玩法
+          ？
         </button>
       </header>
 
