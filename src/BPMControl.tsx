@@ -11,11 +11,18 @@ interface BPMControlProps {
 
 const OCTAVE_OPTIONS = [3, 4, 5, 6, 7, 8] as const;
 
-export default function BPMControl({ bpm, onBPMChange, currentKey, onKeyChange, octave, onOctaveChange }: BPMControlProps) {
+export default function BPMControl({
+  bpm,
+  onBPMChange,
+  currentKey,
+  onKeyChange,
+  octave,
+  onOctaveChange,
+}: BPMControlProps) {
   return (
     <div className="bpm-control">
       <label className="bpm-control__item">
-        <span className="bpm-control__label">Key</span>
+        <span className="bpm-control__label">調</span>
         <select
           className="bpm-control__select"
           value={currentKey}
@@ -30,7 +37,7 @@ export default function BPMControl({ bpm, onBPMChange, currentKey, onKeyChange, 
       </label>
 
       <label className="bpm-control__item">
-        <span className="bpm-control__label">Oct</span>
+        <span className="bpm-control__label">均</span>
         <select
           className="bpm-control__select bpm-control__octave"
           value={octave}
@@ -45,7 +52,7 @@ export default function BPMControl({ bpm, onBPMChange, currentKey, onKeyChange, 
       </label>
 
       <label className="bpm-control__item">
-        <span className="bpm-control__label">BPM</span>
+        <span className="bpm-control__label">拍速</span>
         <input
           type="range"
           className="bpm-control__slider"

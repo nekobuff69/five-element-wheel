@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import type { ElementType, WheelMode } from './types';
 import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
 import { findSnapTargetFromDOM } from './geometry';
@@ -121,26 +122,34 @@ function StonePalette({ selectedStone, onSelectStone, onClear, dispatch, wheelMo
             'stone-palette__stone' +
             (selectedStone === el ? ' stone-palette__stone--selected' : '')
           }
-          style={{ backgroundColor: ELEMENT_COLORS[el] }}
+          data-element={el}
+          style={{ '--stone-color': ELEMENT_COLORS[el] } as CSSProperties}
           onClick={() => onSelectStone(el)}
           onPointerDown={handlePointerDown(el)}
         >
-          {ELEMENT_SYMBOLS[el]}
+          <span className="stone-palette__core">
+            {ELEMENT_SYMBOLS[el]}
+          </span>
         </div>
       ))}
       <button className="stone-palette__clear" onClick={onClear}>
-        Reset
+        歸零
       </button>
       {draggingElement && (ghostPosition || isFadingOut) && (
         <div
           className={`stone-ghost${isFadingOut ? ' stone-ghost--fading' : ''}`}
-          style={{
-            left: ghostPosition?.x ?? 0,
-            top: ghostPosition?.y ?? 0,
-            backgroundColor: ELEMENT_COLORS[draggingElement],
-          }}
+          data-element={draggingElement}
+          style={
+            {
+              left: ghostPosition?.x ?? 0,
+              top: ghostPosition?.y ?? 0,
+              '--stone-color': ELEMENT_COLORS[draggingElement],
+            } as CSSProperties
+          }
         >
-          {ELEMENT_SYMBOLS[draggingElement]}
+          <span className="stone-ghost__core">
+            {ELEMENT_SYMBOLS[draggingElement]}
+          </span>
         </div>
       )}
     </div>

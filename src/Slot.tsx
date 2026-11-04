@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { ElementType, WheelMode } from './types';
 import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
 
@@ -15,7 +16,18 @@ interface SlotProps {
   isDraggedAway?: boolean;
 }
 
-function Slot({ index, element, isQueued, counterRotation, onClick, onPointerDown, mode, isDimmed, isCurrentlyPlaying, isSnapTarget, isDraggedAway }: SlotProps) {
+function Slot({
+  index,
+  element,
+  isQueued,
+  counterRotation,
+  onClick,
+  onPointerDown,
+  isDimmed,
+  isCurrentlyPlaying,
+  isSnapTarget,
+  isDraggedAway,
+}: SlotProps) {
   const displayElement = isDraggedAway ? null : element;
   const className = [
     'slot',
@@ -24,7 +36,16 @@ function Slot({ index, element, isQueued, counterRotation, onClick, onPointerDow
     isSnapTarget ? 'slot--glow' : '',
     isCurrentlyPlaying ? 'slot--playing' : '',
     isDimmed ? 'slot--dimmed' : '',
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const style = {
+    '--stone-color': displayElement
+      ? ELEMENT_COLORS[displayElement]
+      : undefined,
+    transform: `rotate(${counterRotation}deg)`,
+  } as CSSProperties;
 
   return (
     <div
@@ -32,12 +53,14 @@ function Slot({ index, element, isQueued, counterRotation, onClick, onPointerDow
       onPointerDown={onPointerDown}
       onClick={onClick}
       data-slot-index={index}
-      style={{
-        backgroundColor: displayElement ? ELEMENT_COLORS[displayElement] : undefined,
-        transform: `rotate(${counterRotation}deg)`,
-      }}
+      data-element={displayElement ?? undefined}
+      style={style}
     >
-      {displayElement && ELEMENT_SYMBOLS[displayElement]}
+      {displayElement && (
+        <span className="slot__core">
+          {ELEMENT_SYMBOLS[displayElement]}
+        </span>
+      )}
       <span className="slot__index">{index}</span>
     </div>
   );
