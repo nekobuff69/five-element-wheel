@@ -61,7 +61,6 @@ function Slot({
           {ELEMENT_SYMBOLS[displayElement]}
         </span>
       )}
-      <span className="slot__index">{index}</span>
     </div>
   );
 }

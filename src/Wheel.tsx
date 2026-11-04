@@ -66,9 +66,6 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
     handleSlotPointerDown,
   } = useSlotDrag(dispatch);
   const [showTackFlash, setShowTackFlash] = useState(false);
-  const [showHint, setShowHint] = useState(
-    state.slots.every((s) => s === null),
-  );
 
   useEffect(() => {
     if (state.mode === 'winding' && Math.abs(state.rotation) >= 360) {
@@ -80,12 +77,6 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
       setShowTackFlash(false);
     }
   }, [state.rotation, state.mode]);
-
-  useEffect(() => {
-    if (state.mode === 'winding') {
-      setShowHint(false);
-    }
-  }, [state.mode]);
 
   function getWheelStyle(): CSSProperties {
     if (state.mode === 'springBack') {
@@ -157,7 +148,9 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
               const counterRotation = -(effectiveRotation + slotAngle);
               const sortedPos = playbackIndices.indexOf(i);
               const isCurrentlyPlaying =
-                sortedPos >= 0 && sortedPos === springBackPlayingIndex;
+                state.mode === 'springBack' &&
+                sortedPos >= 0 &&
+                sortedPos === springBackPlayingIndex;
               const isDimmed =
                 state.mode === 'springBack' &&
                 state.slots[i] !== null &&
@@ -248,31 +241,32 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
 
           <div className="wheel-direction" aria-hidden="true">
             {state.direction === 'cw'
-              ? '順 →'
+              ? '← 逆'
               : state.direction === 'ccw'
-                ? '← 逆'
+                ? '順 →'
                 : ''}
           </div>
 
-          {slotGhostElement && (slotGhostPosition || slotGhostFading) && (
-            <div
-              className={`stone-ghost${slotGhostFading ? ' stone-ghost--fading' : ''}`}
-              data-element={slotGhostElement}
-              style={
-                {
-                  left: slotGhostPosition?.x ?? 0,
-                  top: slotGhostPosition?.y ?? 0,
-                  '--stone-color': ELEMENT_COLORS[slotGhostElement],
-                } as CSSProperties
-              }
-            >
-              <span className="stone-ghost__core">
-                {ELEMENT_SYMBOLS[slotGhostElement]}
-              </span>
-            </div>
-          )}
         </div>
       </div>
+
+      {slotGhostElement && (slotGhostPosition || slotGhostFading) && (
+        <div
+          className={`stone-ghost${slotGhostFading ? ' stone-ghost--fading' : ''}`}
+          data-element={slotGhostElement}
+          style={
+            {
+              left: slotGhostPosition?.x ?? 0,
+              top: slotGhostPosition?.y ?? 0,
+              '--stone-color': ELEMENT_COLORS[slotGhostElement],
+            } as CSSProperties
+          }
+        >
+          <span className="stone-ghost__core">
+            {ELEMENT_SYMBOLS[slotGhostElement]}
+          </span>
+        </div>
+      )}
 
       <PhraseTraceView
         queuedSlotIndices={state.queuedSlotIndices}
@@ -280,10 +274,6 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
         playingIndex={springBackPlayingIndex}
         mode={state.mode}
       />
-
-      {showHint && state.mode === 'ready' && (
-        <div className="wheel-hint">拖石入巢 · 轉盤上弦 · 鬆手成句</div>
-      )}
     </>
   );
 }

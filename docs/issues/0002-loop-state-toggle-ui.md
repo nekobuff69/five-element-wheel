@@ -1,3 +1,5 @@
+> Historical ticket — records the requirements at the time it was written, not the current implementation. See `CONTEXT.md` and `docs/adr/0008-loop-playback-architecture.md`.
+
 ## Parent
 
 docs/prd/0001-loop-stone-drag.md

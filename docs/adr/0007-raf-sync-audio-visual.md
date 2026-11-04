@@ -36,20 +36,20 @@ Both the audio scheduler and the rAF loop (inside `startPlayback()`) use `state.
 
 The previous ascending/descending sort was removed because it created a mismatch between what the user wound and what played back.
 
-### 4. Empty slots = no highlight (but timing preserved)
+### 4. Every beat is reported, including rests
 
-When `currentBeat` maps to an empty slot, `springBackPlayingIndex` is set to `-1`, so no stone highlights. The beat grid is preserved — the next non-empty slot plays on its correct beat, not prematurely.
+The rAF loop calls `onBeat(currentBeat % count)` on every beat. A rest is represented by a Slot whose element is `null`: the Head stays empty, the slot still lights a cinnabar ring to show it is being read, and the phrase trace breaks its stroke there. The beat grid is preserved — the next non-empty slot plays on its correct beat, not prematurely.
 
 ### 5. rAF lifecycle
 
 - **Start**: When `state.mode` transitions to `'springBack'`, the effect calls `startPlayback(config, onBeat, onComplete)`, which creates an internal `PlaybackState` object and starts the rAF loop.
-- **Self-terminate**: When `elapsed >= totalDuration + 0.5 × beatInterval`, the loop dispatches `COMPLETE` and stops requesting frames.
+- **Self-terminate**: When `!loop && currentBeat >= count`, the loop calls `onComplete()` and stops requesting frames. With `loop = true` it never completes; it extends the pre-scheduled iterations instead (ADR-0008).
 - **Cleanup**: The returned cancel function sets `PlaybackState.cancelled = true` and calls `cancelAnimationFrame` on unmount or mode change.
-- **`transitionend` fallback**: Remains as a safety net — if rAF is throttled hard, CSS will still fire and dispatch `COMPLETE`.
+- **`transitionend` guard**: The Wheel's `onTransitionEnd` handler returns early while `playbackRef.current` is set, so the CSS transition never double-dispatches `COMPLETE` during active playback.
 
 ### 6. `springBackPlayingIndex` interpretation
 
-The index now means "position in the encounter-order array" (`state.queuedSlotIndices`). Both the audio scheduler and the visual highlight use this same interpretation.
+The index means "position in the encounter-order array" (`state.queuedSlotIndices`). Both the audio scheduler and the visual highlight use this same interpretation.
 
 ## Alternatives considered
 
@@ -69,6 +69,6 @@ The index now means "position in the encounter-order array" (`state.queuedSlotIn
 - **Negative**: rAF loop creates React state updates on every frame during playback (60fps × ~10 beats = ~10 actual updates, since `springBackPlayingIndex` only changes on beat boundaries). Negligible at 10 slots.
 - **Negative**: If the tab is backgrounded during playback, rAF stops. Audio continues (scheduled on hardware clock), visual resumes when tab is foregrounded. User may see a visual jump to the current beat.
 
-### 7. Loop iteration restart
+### 7. Loop iteration restart — superseded
 
-When loop is enabled, `COMPLETE` returns `mode: 'springBack'` (same mode) with incremented `loopIteration`. The useEffect dependency array includes `state.loopIteration`, so it re-runs on each loop iteration, calling `startPlayback()` again with a fresh `slots` snapshot. This enables hot reload — each iteration reads current state, not a stale closure.
+> This section originally described a `loopIteration` field and a `COMPLETE` that returned `mode: 'springBack'`. That approach was replaced by ADR-0008: one `startPlayback()` call pre-schedules four iterations and extends dynamically, `COMPLETE` always returns `ready`, and there is no `loopIteration` field. Kept here only as a record of the earlier design.

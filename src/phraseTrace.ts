@@ -41,7 +41,7 @@ export interface PhraseTraceResult {
 export interface PhraseTraceInput {
   queuedSlotIndices: number[];
   slots: (ElementType | null)[];
-  /** springBackPlayingIndex: -1 on rest beats and while idle. */
+  /** springBackPlayingIndex: -1 while idle; rests now report their queue index. */
   playingIndex: number;
   previousPlayedUntil: number;
   previousIteration: number;
@@ -52,7 +52,7 @@ export interface PhraseTraceInput {
  * Pure computation of the phrase trace.
  *
  * Three time-scale rules are encoded here so the view layer stays dumb:
- *  - A rest beat reports -1 and must hold the line instead of rolling it back.
+ *  - A rest beat with playingIndex -1 must hold the line instead of rolling it back (legacy input path).
  *  - A playing index below the previous played-until marks a new loop iteration.
  *  - Only consecutive sounded beats are joined; a rest breaks the stroke.
  */

@@ -1,3 +1,5 @@
+> Historical PRD — records the intended behaviour at the time it was written, not the current implementation. See `CONTEXT.md`, `docs/adr/0008-loop-playback-architecture.md`, and the individual tickets under `docs/issues/`.
+
 # Playmode: Loop + Stone Drag UX
 
 ## Problem Statement

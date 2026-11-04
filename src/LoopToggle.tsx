@@ -6,7 +6,7 @@ interface LoopToggleProps {
 export default function LoopToggle({ loop, onToggle }: LoopToggleProps) {
   return (
     <label className="bpm-control ink-switch">
-      <span className="bpm-control__label">周而復始</span>
+      <span className="bpm-control__label">循環</span>
       <input
         type="checkbox"
         className="ink-switch__input"

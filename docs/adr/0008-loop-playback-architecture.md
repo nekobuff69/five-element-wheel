@@ -19,7 +19,7 @@ Loop needed to replay audio without re-winding the wheel. Hot reload needed mid-
 
 ### 1. Pure audio replay (no physical rotation)
 
-After first spring-back completes, the wheel stays at rest position (0°). Loop iterations are pure audio replays using the same `queuedSlotIndices` but a fresh `slots` snapshot each iteration. No CSS transition, no physical wheel motion.
+The wheel stays at rest position (0°) during loop. One `startPlayback()` call pre-schedules several iterations from a single `pb.slots` snapshot; `updateSlots()` patches every future beat when the composition changes. There is no per-iteration `startPlayback()` re-run and no fresh snapshot per iteration. With `loop = true` the mode stays `springBack` and `COMPLETE` is never dispatched.
 
 Rationale: The physical wind is the performance — the user's gesture. Loop is about the composition repeating. Auto-spinning the wheel would add motor simulation the instrument metaphor doesn't need.
 
@@ -57,16 +57,15 @@ When `updateSlots()` is called:
 
 The `useWheelPlayback` hook watches `state.slots` changes during `springBack` mode and calls `updateSlots()` with the current beat computed from `AudioContext.currentTime`.
 
-### 4. Iteration atomicity
+### 4. Iteration atomicity — current behaviour
 
-Each loop iteration is an atomic unit:
-- Stone edits apply to future beats (option C) — already-scheduled audio plays to completion
-- BPM changes apply on next iteration — no mid-flight tempo adjustment
-- Toggle loop off → current iteration finishes, then stops
+- **Stone edits** apply to future beats (option C) — already-scheduled audio plays to completion, `updateSlots()` re-schedules beats ≥ current across all pre-scheduled iterations.
+- **BPM, key, octave, or loop changes** are effect dependencies in `useWheelPlayback`. Changing any of them cancels the current playback and starts a new one from beat 1 immediately — there is no mid-flight tempo adjustment and no "next iteration" deferral.
+- **Toggle loop off** restarts from beat 1 with `loop = false`; one pass plays, then `onComplete()` dispatches `COMPLETE`.
 
-### 5. `CLEAR_ALL` and `WIND` work during loop
+### 5. `RESET` and `WIND` work during loop
 
-- `CLEAR_ALL` allowed in any mode — full reset including queued indices, sets mode to `ready`, cancels playback via useEffect cleanup
+- `RESET` (the 歸零 button) is valid in any mode — returns full `initialWheelState`, clears queued indices, sets mode to `ready`, and cancels playback via useEffect cleanup. The action previously called `CLEAR_ALL` no longer exists.
 - `WIND` during `springBack` interrupts loop, transitions to `winding`, resets queued indices for fresh wind cycle. After release, loop auto-restarts if still enabled.
 
 ## Alternatives considered
@@ -75,14 +74,17 @@ Each loop iteration is an atomic unit:
 |-------------|-----------------|
 | Auto-spin wheel during loop | Adds motor simulation the metaphor doesn't need; complex CSS transition choreography for invisible user |
 | Immediate stone edit (cancel + re-schedule from current beat) | Jarring audio glitch; requires tearing down and rebuilding audio graph mid-playback |
-| BPM change mid-iteration | Complex — would need to rescale all future beat times; inconsistent with stone edit pattern |
-| Synthetic `RESTART` action (COMPLETE → READY → dispatch RESTART → SPRING_BACK) | Unnecessary indirection; reducer can decide next state directly based on loop flag |
+| BPM change mid-iteration | Complex — would need to rescale all future beat times; inconsistent with stone edit pattern. The implemented effect instead cancels and restarts the phrase. |
+| Synthetic `RESTART` action (COMPLETE → READY → dispatch RESTART → SPRING_BACK) | Unnecessary indirection; looping lives in `playback.ts`, not in the reducer |
 
 ## Consequences
 
 - **Positive**: Loop is seamless — pre-scheduling eliminates gaps between iterations. First spring-back uses CSS transition synced to audio; loop iterations are pure audio with visual slot highlighting via `onBeat` callback.
 - **Positive**: Hot reload works naturally — `updateSlots()` cancels future oscillators across all scheduled iterations, re-schedules with new elements. Already-played beats unchanged.
-- **Positive**: Loop interruption is natural — user can drag wheel or clear all stones anytime.
+- **Positive**: Loop interruption is natural — user can drag wheel or reset anytime.
 - **Negative**: Pre-scheduling multiple iterations increases memory usage (oscillator array grows with each iteration). Mitigated by dynamic extension — only 4 iterations scheduled initially, more added as needed.
 - **Negative**: Hot reload requires per-beat oscillator tracking, adding complexity to `playback.ts`. Acceptable for the feature value.
 - **Negative**: Mid-beat edits clamp `startTime` to `ctx.currentTime + 0.01`, causing slight timing imprecision. Imperceptible in practice.
+- **Negative**: Parameter changes restart the phrase from beat 1 rather than taking effect on the next iteration. This is a known UX rough edge, listed as out of scope in the current redesign spec.
+
+> Historical note: the original ADR said "BPM changes apply on next iteration" and "toggle loop off → current iteration finishes". Those described the intended design; the implemented effect dependency produces the restart behaviour documented in §4.

@@ -119,7 +119,7 @@ describe('startPlayback updateSlots', () => {
   function startFresh(
     slotElements: (ElementType | null)[],
     queuedIndices: number[],
-    bpm = 100,
+    bpm = 160,
   ): PlaybackControl {
     const slots: (ElementType | null)[] = Array(10).fill(null);
     slotElements.forEach((el, i) => { slots[i] = el; });

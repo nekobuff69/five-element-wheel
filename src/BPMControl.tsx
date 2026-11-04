@@ -37,7 +37,7 @@ export default function BPMControl({
       </label>
 
       <label className="bpm-control__item">
-        <span className="bpm-control__label">均</span>
+        <span className="bpm-control__label">八度</span>
         <select
           className="bpm-control__select bpm-control__octave"
           value={octave}
@@ -56,8 +56,8 @@ export default function BPMControl({
         <input
           type="range"
           className="bpm-control__slider"
-          min={60}
-          max={180}
+          min={120}
+          max={200}
           step={1}
           value={bpm}
           onChange={(e) => onBPMChange(Number(e.target.value))}
