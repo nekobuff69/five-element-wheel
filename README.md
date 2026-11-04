@@ -26,16 +26,6 @@ These five elements map to the five notes of the Chinese pentatonic scale (五�
 
 ---
 
-## Demo
-
-[![Demo](https://raw.githubusercontent.com/nekobuff69/five-element-wheel/main/docs/demo/preview.gif)](https://streamable.com/lpduul)
-
-**▶ Watch the full demo (74s, with sound):** [Streamable](https://streamable.com/lpduul) (online until Jan 31, 2027) · [MP4 in the repo](docs/demo/demo.mp4) (permanent)
-
-The recording predates the minimal ink compass redesign. It documents the interaction model, not the current visual theme.
-
----
-
 ## Features & User Experience
 
 ### Mobile-First, Gesture-Driven
