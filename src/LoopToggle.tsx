@@ -5,14 +5,15 @@ interface LoopToggleProps {
 
 export default function LoopToggle({ loop, onToggle }: LoopToggleProps) {
   return (
-    <label className="bpm-control">
-      <span className="bpm-control__label">Loop</span>
+    <label className="bpm-control ink-switch">
+      <span className="bpm-control__label">循環</span>
       <input
         type="checkbox"
-        className="bpm-control__slider"
+        className="ink-switch__input"
         checked={loop}
         onChange={(e) => onToggle(e.target.checked)}
       />
+      <span className="ink-switch__mark" aria-hidden="true" />
     </label>
   );
 }

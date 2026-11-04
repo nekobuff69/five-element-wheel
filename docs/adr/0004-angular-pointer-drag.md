@@ -25,12 +25,11 @@ Key implementation details:
 - Delta is normalized to [-180, 180] to handle the ±180° wrap
 - Direction is locked on the first non-zero delta: positive → CW, negative → CCW
 
-Pointer events are gated by mode: only `ready` and `winding` accept pointer input. During `springBack`, `tack`, and `complete`, `handlePointerDown` returns early.
+Pointer events are gated by mode: `ready`, `winding`, and `springBack` accept pointer input. There is no `tack` or `complete` mode — tack is derived from rotation and COMPLETE is an action. During `springBack` the first 15° of drag is swallowed by the commit threshold (ADR-0010).
 
 The pointer-drag logic was later extracted into a dedicated `useWheelGesture` custom hook (`src/useWheelGesture.ts`). The hook uses native `addEventListener` (not React synthetic events) with ref-stored callbacks to avoid stale closures. The component calls `useWheelGesture(wheelRef, mode, onWind, onRelease)` and receives clean delta/release notifications — all pointer capture, angle math, and threshold gating are encapsulated.
 
-
-Slot click vs drag disambiguation: slot `onClick` dispatches PLACE_STONE, which only succeeds in `ready` mode. During a drag, the first WIND transitions to `winding`, so any accidental slot click is a no-op. No explicit click-vs-drag threshold needed.
+Slot click vs drag disambiguation: slot `onClick` dispatches PLACE_STONE, which succeeds in `ready` and `springBack`. During a drag, the first WIND transitions to `winding`, so any accidental slot click is a no-op. No explicit click-vs-drag threshold needed.
 
 ## Alternatives considered
 
@@ -40,7 +39,7 @@ Slot click vs drag disambiguation: slot `onClick` dispatches PLACE_STONE, which 
 | `onTouchStart/Move/End` | Pointer events unify mouse and touch; no need for two event systems |
 | Canvas-based hit testing | Overkill for 10 circular slots; CSS transform + absolute positioning is simpler |
 | Linear distance tracking (pixels dragged → rotation) | Feels unnatural — dragging through the wheel center would produce no rotation |
-| Separate click handler with drag threshold | Reducer already guards: PLACE_STONE only works in `ready`, which drag immediately exits |
+| Separate click handler with drag threshold | Reducer already guards: PLACE_STONE is blocked in `winding`, which drag immediately enters |
 
 ## Consequences
 
@@ -49,3 +48,5 @@ Slot click vs drag disambiguation: slot `onClick` dispatches PLACE_STONE, which 
 - **Positive**: Angular-only computation means the entire wheel surface is a valid drag target with consistent feel.
 - **Negative**: The `atan2` computation runs on every pointermove (~60Hz on mobile). Negligible for a single calculation, but worth noting if future features add expensive per-frame work.
 - **Negative**: No inertia or momentum during winding — the wheel stops instantly when the finger lifts. This is intentional (the spring-back IS the momentum), but differs from a free-spinning wheel UX.
+
+> Historical note: the original ADR listed `tack` and `complete` as modes and said springBack rejected pointer input. Both were superseded by the 3-mode reducer and ADR-0010.

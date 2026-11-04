@@ -501,24 +501,24 @@ describe('COMPLETE', () => {
 
 describe('SET_BPM', () => {
   it('sets bpm to a value within range', () => {
-    const s = wheelReducer(initialWheelState, { type: 'SET_BPM', bpm: 120 });
+    const s = wheelReducer(initialWheelState, { type: 'SET_BPM', bpm: 160 });
+    expect(s.bpm).toBe(160);
+  });
+
+  it('clamps below 120 to 120', () => {
+    const s = wheelReducer(initialWheelState, { type: 'SET_BPM', bpm: 30 });
     expect(s.bpm).toBe(120);
   });
 
-  it('clamps below 60 to 60', () => {
-    const s = wheelReducer(initialWheelState, { type: 'SET_BPM', bpm: 30 });
-    expect(s.bpm).toBe(60);
-  });
-
-  it('clamps above 180 to 180', () => {
+  it('clamps above 200 to 200', () => {
     const s = wheelReducer(initialWheelState, { type: 'SET_BPM', bpm: 250 });
-    expect(s.bpm).toBe(180);
+    expect(s.bpm).toBe(200);
   });
 
   it('works in any state', () => {
     const wind = cw(initialWheelState, 36);
-    const s = wheelReducer(wind, { type: 'SET_BPM', bpm: 72 });
-    expect(s.bpm).toBe(72);
+    const s = wheelReducer(wind, { type: 'SET_BPM', bpm: 144 });
+    expect(s.bpm).toBe(144);
   });
 });
 

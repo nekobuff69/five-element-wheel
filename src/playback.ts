@@ -201,15 +201,10 @@ export function startPlayback(
       return;
     }
 
-    // Report beat position within iteration for visual feedback
+    // Report the beat position on every beat, including rests, so a Slot can
+    // show that it is being read even when it holds no Stone.
     if (currentBeat >= 0) {
-      const positionInIteration = currentBeat % pb.count;
-      const slotIdx = pb.indices[positionInIteration];
-      if (pb.slots[slotIdx] !== null) {
-        onBeat(positionInIteration);
-      } else {
-        onBeat(-1);
-      }
+      onBeat(currentBeat % pb.count);
     }
 
     pb.rafId = requestAnimationFrame(tick);

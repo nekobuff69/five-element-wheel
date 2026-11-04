@@ -33,12 +33,13 @@ export type WheelAction =
   | { type: 'SET_OCTAVE'; octave: number };
 
 
+/** Single source of truth for element colours (ink/mineral palette). */
 export const ELEMENT_COLORS: Record<ElementType, string> = {
-  earth: '#8B6914',
-  metal: '#A8B8C0',
-  wood: '#4CAF50',
-  fire: '#E53935',
-  water: '#1E88E5',
+  earth: '#8A6A3C', // ochre soil
+  metal: '#B08D57', // gold leaf
+  wood: '#6E8B84', // celadon
+  fire: '#A8322A', // cinnabar
+  water: '#4A6470', // ink blue
 };
 export const ELEMENT_SYMBOLS: Record<ElementType, string> = {
   earth: '土',

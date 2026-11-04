@@ -189,7 +189,7 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
     }
 
     case 'SET_BPM': {
-      const bpm = Math.max(60, Math.min(180, action.bpm));
+      const bpm = Math.max(120, Math.min(200, action.bpm));
       return { ...state, bpm };
     }
 

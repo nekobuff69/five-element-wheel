@@ -14,12 +14,12 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,json}"],
       },
       manifest: {
-        name: "Five-Element Wheel",
-        short_name: "5-Element Wheel",
+        name: "五行輪 · Five-Element Wheel",
+        short_name: "五行輪",
         description:
-          "A pentatonic musical instrument based on the Five Elements",
-        theme_color: "#1a1a2e",
-        background_color: "#1a1a2e",
+          "五行配五音 — 轉盤上弦、鬆手成句的五聲音階樂器",
+        theme_color: "#12100e",
+        background_color: "#12100e",
         display: "standalone",
         orientation: "portrait",
         icons: [
