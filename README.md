@@ -52,7 +52,7 @@ Drag the wheel clockwise or counter-clockwise. As each slot crosses the fixed **
 | What you see | What it means |
 |--------------|---------------|
 | Thin gold ring on a slot | Slot is queued, will play |
-| No ring on approaching slot | Not yet captured |
+| A short hairline gold bar on the approaching Slot | The next Slot to cross the Head — a distinct cue from the queued ring and the snap-target dashed ring |
 
 Drag further to queue more slots. A full rotation (360°) queues all 10. A **tack sound** (noise burst + sine blip) confirms you've reached the limit. The wheel is capped at ±360°. A small 順 / 逆 label shows the visual read order, which is the opposite of the finger's wind direction (see `CONTEXT.md`).
 
@@ -100,7 +100,7 @@ All controls work during playback. Changing BPM, key, octave, or loop cancels th
 
 #### 8. Feedback & Accessibility
 
-Feedback is derived from state differences (see `CONTEXT.md` and ADR-0012) and delivered over three channels: sound, short hard-attack motion (always shorter than the shortest beat), and touch. Short **haptics** mark winding crossings, the tack, snap-target changes (only when the target actually changes), sounded beats and Stone placement; on platforms without vibration (for example iOS Safari), sound and visuals still carry the same information. With **reduced motion** enabled, every displacement animation falls back to a colour or opacity change, and states stay distinguishable by solid versus dashed line style as well as colour. No cue adds layout height, so the Wheel keeps its size on short viewports.
+Feedback is derived from state differences (see `CONTEXT.md` and ADR-0012) and delivered over three channels: sound, short hard-attack motion (always shorter than the shortest beat), and touch. Short **haptics** mark winding crossings, the tack, and snap-target changes (only when the target actually changes) at 8 / 20 / 5 ms; on platforms without vibration (for example iOS Safari), sound and visuals still carry the same information. With **reduced motion** enabled, every displacement animation falls back to a colour or opacity change, and states stay distinguishable by solid versus dashed line style as well as colour. No cue adds layout height, so the Wheel keeps its size on short viewports.
 
 ---
 
@@ -116,7 +116,7 @@ Feedback is derived from state differences (see `CONTEXT.md` and ADR-0012) and d
 | Rotation | CSS `transform: rotate()` with inline transition override for spring-back (ADR-0002) |
 | Layout | Runtime viewport fitting of the fixed 360px Wheel coordinate system (ADR-0011) |
 | PWA | `vite-plugin-pwa` with workbox `generateSW`, offline precache |
-| Testing | Vitest 2 + jsdom, 142 tests across 7 files |
+| Testing | Vitest 2 + jsdom, 146 tests across 7 files |
 
 ### Architecture (flat `src/`)
 
@@ -130,9 +130,9 @@ src/
   wheelReducer.test.ts         — 84 unit tests (state machine + actions + key/octave)
   audio.ts                     — single AudioContext + master gain, element voices, one-shots, haptics
   feedbackEvents.ts            — deriveFeedbackEvents() pure state-diff to feedback events
-  feedbackEvents.test.ts       — 22 tests for the single derived-event seam
+  feedbackEvents.test.ts       — 26 tests for the single derived-event seam
   useFeedback.ts               — consumer: sound, haptics, tack flash, view tokens
-  playback.ts                  — rAF-scheduled engine; re-exports AudioContext / tack / createVoice
+  playback.ts                  — rAF-scheduled engine; re-exports getAudioContext / playTackSound, imports createVoice
   playback.test.ts             — 6 updateSlots tests
   detection.test.ts            — 10 slot-crossing detection tests
   direction-bias.test.ts       — 3 wind-direction tests
@@ -190,7 +190,7 @@ Opens at `http://localhost:5173/` (or next available port).
 | `bun run dev` | Start dev server with hot reload |
 | `bun run build` | Type-check and build to `dist/` |
 | `bun run preview` | Preview production build locally |
-| `bun run test` | Run full test suite (142 tests) |
+| `bun run test` | Run full test suite (146 tests) |
 | `bunx tsc --noEmit` | Type check without emitting |
 
 ### Project Dependencies
@@ -226,7 +226,7 @@ Output goes to `dist/`. The build produces a fully offline-capable PWA with serv
 
 ### Testing Philosophy
 
-The suite has 142 tests in seven files: reducer purity and action guards (`wheelReducer.test.ts`, 84), the derived feedback-event seam (`feedbackEvents.test.ts`, 22), playback `updateSlots` (`playback.test.ts`, 6), slot-crossing detection (`detection.test.ts`, 10), wind-direction bias (`direction-bias.test.ts`, 3), visual feedback states (`visual-feedback.test.ts`, 4), and the pure phrase-trace computation (`phraseTrace.test.ts`, 13). `deriveFeedbackEvents` is the single automated seam for the audiovisual-feedback feature; CSS, SVG rendering, timbre and haptics are verified visually and by ear, not asserted in tests, per project convention.
+The suite has 146 tests in seven files: reducer purity and action guards (`wheelReducer.test.ts`, 84), the derived feedback-event seam (`feedbackEvents.test.ts`, 26), playback `updateSlots` (`playback.test.ts`, 6), slot-crossing detection (`detection.test.ts`, 10), wind-direction bias (`direction-bias.test.ts`, 3), visual feedback states (`visual-feedback.test.ts`, 4), and the pure phrase-trace computation (`phraseTrace.test.ts`, 13). `deriveFeedbackEvents` is the single automated seam for the audiovisual-feedback feature; CSS, SVG rendering, timbre and haptics are verified visually and by ear, not asserted in tests, per project convention.
 
 ```bash
 bun run test

@@ -52,12 +52,6 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
     state,
     dispatch,
   );
-  // Single derived feedback stream drives sound, haptics and the tack flash.
-  // View tokens feed the phrase-trace wash, wet-ink and restart inscription.
-  const { tackFlash, washToken, pendingSlots, restartNote } = useFeedback(
-    state,
-    springBackPlayingIndex,
-  );
   useWheelGesture(
     wheelRef,
     state.mode,
@@ -72,6 +66,16 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
     snapTargetSlot: slotDragSnapTarget,
     handleSlotPointerDown,
   } = useSlotDrag(dispatch);
+  // Both drag paths expose a snap target; combine them into the one signal the
+  // derived stream consumes (the snap haptic now comes from a snap-changed event).
+  const combinedSnapTarget = slotDragSnapTarget ?? snapTargetSlot;
+  // Single derived feedback stream drives sound, haptics and the tack flash.
+  // View tokens feed the phrase-trace wash, wet-ink and restart inscription.
+  const { tackFlash, washToken, pendingSlots, restartNote } = useFeedback(
+    state,
+    springBackPlayingIndex,
+    combinedSnapTarget,
+  );
 
   function getWheelStyle(): CSSProperties {
     if (state.mode === 'springBack') {
@@ -165,6 +169,7 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
                     index={i}
                     element={state.slots[i]}
                     isQueued={playbackIndices.includes(i)}
+                    isPending={pendingSlots.includes(i)}
                     counterRotation={counterRotation}
                     onClick={() => {
                       if (

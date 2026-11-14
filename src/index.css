@@ -345,6 +345,15 @@ body {
 .slot--glow {
   border: 0.5px dashed var(--ink-gold);
 }
+/* Wet ink: a hot-reloaded future beat. A thin dashed cinnabar ring drawn as an
+   outline — zero layout height and no pseudo-element, so it never collides
+   with the approaching ::before bar or the queued/playing ::after rings.
+   Cinnabar dashed is distinct from the gold dashed snap border. Static, so no
+   reduced-motion alternative is needed. */
+.slot--pending {
+  outline: 0.5px dashed var(--ink-cinnabar);
+  outline-offset: 4px;
+}
 .slot--dimmed {
   opacity: 0.62;
 }

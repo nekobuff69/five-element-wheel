@@ -10,9 +10,6 @@ import type { WheelState } from './types';
  */
 export type RestartField = 'bpm' | 'key' | 'octave' | 'loop';
 
-// `snap-changed` is part of the event vocabulary but is derived from the
-// drag snap-target signal (not from two WheelState snapshots), so it is not
-// emitted here; a later ticket feeds it from useSlotDrag / the palette.
 export type FeedbackEvent =
   | { type: 'slot-crossed'; slotIndex: number; hasStone: boolean }
   | { type: 'tack' }
@@ -27,6 +24,10 @@ export type FeedbackEvent =
 export interface PlaybackSignal {
   playingIndex: number;
   previousPlayingIndex: number;
+  // Pointer-local snap target supplied by the drag hooks as an explicit
+  // signal; snap-changed is derived from it, not from the WheelState diff.
+  snapTarget?: number | null;
+  previousSnapTarget?: number | null;
 }
 
 /**
@@ -49,57 +50,76 @@ export function deriveFeedbackEvents(
   }
 
   events.push(...deriveStoneEdits(prev, next));
-  events.push(...deriveHotReload(prev, next));
+  events.push(...deriveHotReload(prev, next, playback?.playingIndex));
   events.push(...deriveParameterRestart(prev, next));
-  if (playback) events.push(...derivePlayback(next, playback));
+  if (playback) {
+    events.push(...deriveSnap(playback));
+    events.push(...derivePlayback(next, playback));
+  }
 
   return events;
 }
 
 /** A future beat that was edited mid-loop is marked as wet ink, not yet dry. */
-function deriveHotReload(prev: WheelState, next: WheelState): FeedbackEvent[] {
+function deriveHotReload(
+  prev: WheelState,
+  next: WheelState,
+  playingIndex?: number,
+): FeedbackEvent[] {
   if (next.mode !== 'springBack') return [];
   const pending: FeedbackEvent[] = [];
   for (let i = 0; i < next.slots.length; i++) {
     if (prev.slots[i] === next.slots[i]) continue;
-    if (next.queuedSlotIndices.includes(i)) {
-      pending.push({ type: 'hot-reload-pending', slotIndex: i });
+    if (!next.queuedSlotIndices.includes(i)) continue;
+    // Only future beats: when a playback index is known, a beat whose queue
+    // position is already behind the read head is not marked wet. With no
+    // playing index (or before playback starts) every queued edit is marked,
+    // preserving the pre-signal behaviour.
+    if (playingIndex !== undefined && playingIndex >= 0) {
+      const pos = next.queuedSlotIndices.indexOf(i);
+      if (pos < playingIndex) continue;
     }
+    pending.push({ type: 'hot-reload-pending', slotIndex: i });
   }
   return pending;
 }
+
+/** One snap-changed per snap-target change; silence when unchanged or null. */
+function deriveSnap(playback: PlaybackSignal): FeedbackEvent[] {
+  const { snapTarget, previousSnapTarget } = playback;
+  if (snapTarget === undefined || snapTarget === null) return [];
+  if (snapTarget === previousSnapTarget) return [];
+  return [{ type: 'snap-changed', slotIndex: snapTarget }];
+}
+
+type RestartValue = string | number | boolean;
+
+/** Ordered bpm → key → octave → loop, each with its exact Chinese label. */
+const RESTART_DESCRIPTORS: {
+  field: RestartField;
+  read: (s: WheelState) => RestartValue;
+  format: (from: RestartValue, to: RestartValue) => string;
+}[] = [
+  { field: 'bpm', read: (s) => s.bpm, format: (a, b) => `重起 · 拍速 ${a}→${b}` },
+  { field: 'key', read: (s) => s.key, format: (a, b) => `重起 · 調 ${a}→${b}` },
+  { field: 'octave', read: (s) => s.octave, format: (a, b) => `重起 · 八度 ${a}→${b}` },
+  {
+    field: 'loop',
+    read: (s) => s.loop,
+    format: (a, b) => `重起 · 循環 ${a ? '開' : '關'}→${b ? '開' : '關'}`,
+  },
+];
 
 /** A parameter edit restarts the whole phrase; explain why with an inscription. */
 function deriveParameterRestart(prev: WheelState, next: WheelState): FeedbackEvent[] {
   if (prev.mode !== 'springBack' || next.mode !== 'springBack') return [];
   const restarts: FeedbackEvent[] = [];
-  if (prev.bpm !== next.bpm) {
-    restarts.push({
-      type: 'parameter-restart',
-      field: 'bpm',
-      label: `重起 · 拍速 ${prev.bpm}→${next.bpm}`,
-    });
-  }
-  if (prev.key !== next.key) {
-    restarts.push({
-      type: 'parameter-restart',
-      field: 'key',
-      label: `重起 · 調 ${prev.key}→${next.key}`,
-    });
-  }
-  if (prev.octave !== next.octave) {
-    restarts.push({
-      type: 'parameter-restart',
-      field: 'octave',
-      label: `重起 · 八度 ${prev.octave}→${next.octave}`,
-    });
-  }
-  if (prev.loop !== next.loop) {
-    restarts.push({
-      type: 'parameter-restart',
-      field: 'loop',
-      label: `重起 · 循環 ${prev.loop ? '開' : '關'}→${next.loop ? '開' : '關'}`,
-    });
+  for (const d of RESTART_DESCRIPTORS) {
+    const from = d.read(prev);
+    const to = d.read(next);
+    if (from !== to) {
+      restarts.push({ type: 'parameter-restart', field: d.field, label: d.format(from, to) });
+    }
   }
   return restarts;
 }

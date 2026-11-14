@@ -12,9 +12,9 @@ The triage state machine uses the default label vocabulary (`needs-triage`, `nee
 
 Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
-- **`CONTEXT.md`** — ubiquitous language glossary: instrument anatomy (wheel, slot, head, stone, palette, ghost stone, snap target), elements and notes (Earth/root, Metal/M2, Wood/M3, Fire/P5, Water/M6), wheel state machine (READY→WINDING→SPRING_BACK), visual feedback (phrase trace, seal press, guide dialog), direction labels (順/逆), performance concepts (spring-back, loop, loop iteration, hot reload, key, octave, frequency computation, queued slots, play order, beat grid, tack sound, early release, stone drag, snap).
+- **`CONTEXT.md`** — ubiquitous language glossary: instrument anatomy (wheel, slot, head, stone, palette, ghost stone, snap target), elements and notes (Earth/root, Metal/M2, Wood/M3, Fire/P5, Water/M6), wheel state machine (READY→WINDING→SPRING_BACK), visual feedback (phrase trace, seal press, guide dialog), direction labels (順/逆), performance concepts (spring-back, loop, loop iteration, hot reload, key, octave, frequency computation, queued slots, play order, beat grid, tack sound, early release, stone drag, snap), audiovisual feedback (crossing tick, element voice, empty seal, wash / re-ink, wet ink / hot-reload pending, derived event stream).
 - **`docs/adr/`** — architecture decision records:
-  - `0001-use-reducer-state-machine.md` — useReducer with pure reducer (historical: recorded 111 tests; current suite is 120)
+  - `0001-use-reducer-state-machine.md` — useReducer with pure reducer (historical: recorded 111 tests; current suite is 146)
   - `0002-css-transform-rotation.md` — CSS transforms for winding + spring-back
   - `0003-tonejs-transport-audio.md` — tone.js PluckSynth + Transport scheduling (superseded by 0006)
   - `0004-angular-pointer-drag.md` — pointer events with angular delta
@@ -25,18 +25,19 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/do
   - `0009-stone-drag-gesture.md` — document-level pointer events + snap-to-slot
   - `0010-springback-commit-threshold.md` — 15° commit threshold for springBack drag to prevent accidental loop interruption
   - `0011-fit-wheel-to-viewport-height.md` — fit the 360px wheel into one non-scrolling mobile viewport
+  - `0012-audiovisual-feedback.md` — derived-event feedback stream, single AudioContext + master gain, five element voices
 
 ### Tech stack
 
 - **Framework**: Vite 6 + React 18 + TypeScript (strict mode)
 - **State**: Single `useReducer` (`src/wheelReducer.ts`), no external library
-- **Audio**: Native Web Audio API (OscillatorNode triangle wave + GainNode pluck envelope), single AudioContext, mid-playback slot updates via `PlaybackControl.updateSlots()`
+- **Audio**: Native Web Audio API (single AudioContext + master gain, five element voices via the shared `createVoice` factory, one-shot tick / tack / placement sounds), mid-playback slot updates via `PlaybackControl.updateSlots()`
 - **Styling**: Plain CSS with custom properties, BEM-ish class naming, `touch-action: none` for mobile support; minimal ink theme (no gradients or glows)
 - **Interaction**: Raw pointer events, angular-only drag for wheel, document-level listeners for stone drag
 - **Rotation**: CSS `transform: rotate()` with inline transition override for spring-back
 - **Layout**: `100dvh` no-scroll main view; `useFitWheel` scales the fixed 360px Wheel frame into remaining height (ADR-0011)
 - **PWA**: `vite-plugin-pwa` with workbox `generateSW`, offline precache, iOS meta tags
-- **Testing**: Vitest 2 + jsdom, 120 tests across 6 files (`wheelReducer.test.ts` 84, `playback.test.ts` 6, `phraseTrace.test.ts` 13, `detection.test.ts` 10, `direction-bias.test.ts` 3, `visual-feedback.test.ts` 4)
+- **Testing**: Vitest 2 + jsdom, 146 tests across 7 files (`wheelReducer.test.ts` 84, `feedbackEvents.test.ts` 26, `playback.test.ts` 6, `phraseTrace.test.ts` 13, `detection.test.ts` 10, `direction-bias.test.ts` 3, `visual-feedback.test.ts` 4)
 - **Package manager**: bun 1.3+ (`bun.lock`); npm/node can run the same `package.json` scripts
 - **Deployment**: Cloudflare Pages (Git integration, classic Pages project) — push to `main` builds with `npm install -g bun && bun install --frozen-lockfile && bun run build`, output `dist`, live at https://five-element-wheel.pages.dev/; other branches get preview deployments. Vite `base` must stay `/` (serves at domain root). GitHub Pages workflow removed in the cutover.
 
@@ -50,7 +51,11 @@ src/
   frequencies.ts               — getElementFrequencies() pure music theory (key + octave → Hz)
   wheelReducer.ts              — pure reducer + initialWheelState + helpers
   wheelReducer.test.ts         — 84 unit tests (state machine + actions + key/octave)
-  playback.ts                  — AudioContext singleton, tack sound, rAF-scheduled engine with hot reload
+  audio.ts                     — single AudioContext + master gain, five element voices, one-shots, haptics
+  feedbackEvents.ts            — deriveFeedbackEvents() pure state-diff to feedback events
+  feedbackEvents.test.ts       — 26 tests for the single derived-event seam
+  useFeedback.ts               — consumer: sound, haptics, tack flash, view tokens
+  playback.ts                  — rAF-scheduled engine with hot reload; re-exports getAudioContext / playTackSound, imports createVoice
   playback.test.ts             — 6 updateSlots tests
   detection.test.ts            — 10 slot-crossing detection tests
   direction-bias.test.ts       — 3 wind-direction tests
@@ -58,14 +63,14 @@ src/
   phraseTrace.ts               — buildPhraseTrace() pure computation, the single ink-theme test seam
   phraseTrace.test.ts          — 13 phrase-trace tests
   useWheelGesture.ts           — pointer-drag gesture hook (angular delta + threshold + springBack commit threshold)
-  useWheelPlayback.ts          — hook: tack detection/sound, spring-back lifecycle, hot-reload sync
+  useWheelPlayback.ts          — hook: spring-back playback lifecycle (start/cancel), playing-index reporting, hot-reload sync
   useSlotDrag.ts               — hook: drag an existing Stone between Slots or off the Wheel
   useFitWheel.ts               — hook: fit the 360px Wheel into the remaining viewport height
   geometry.ts                  — getSlotPosition(), findSnapTarget(), findSnapTargetFromDOM(), geometry constants
   Wheel.tsx                    — compass arc, Slots, Head, needle, ghost stone, phrase trace
   Slot.tsx                     — empty/filled/queued/playing/dimmed/snap-target states
   Head.tsx                     — cinnabar square seal at 6 o'clock
-  PhraseTraceView.tsx          — ink chart: 10 beats x 5 degrees, static grid, clearing marks
+  PhraseTraceView.tsx          — ink chart: 10 beats x 5 degrees, static grid, wash / re-ink, wet-ink marks, restart caption, aria-live
   StonePalette.tsx             — 5 mineral Stones + 歸零 + palette drag via findSnapTargetFromDOM()
   LoopToggle.tsx               — 循環 checkbox
   BPMControl.tsx               — 調 / 八度 / 拍速 controls
@@ -79,7 +84,7 @@ src/
 - Empty slots are rests — the 10-beat grid is always maintained. The beat callback reports the queue index on every beat, including rests.
 - Spring-back duration = `queuedSlotCount × (60 / BPM)` seconds.
 - CSS transition and audio scheduling fire in the same useEffect frame.
-- AudioContext auto-resumes on first audio-producing action (tack sound or spring-back playback).
+- AudioContext is unlocked on the first pointer-down gesture via `unlockAudio()`.
 - Pointer events gated by mode: wheel drag accepts `ready`, `winding`, `springBack`. Stone placement accepts `ready`, `springBack`.
 - Wheel drag during springBack requires a 15° commit threshold to prevent accidental loop interruption.
 - Tack sound plays when rotation crosses 360° during winding (derived value, not a mode transition).
@@ -88,7 +93,7 @@ src/
 - `WIND` during `springBack` interrupts loop, resets queued indices for fresh wind cycle.
 - Stone drag uses document-level pointer events (not container-level) to avoid gesture blocking.
 - `WIND` resets rotation baseline to 0 when transitioning from `springBack` (CSS already animated to 0°).
-- Queued Slots get a thin gold ring (`slot--queued`); an approaching Slot has no special styling. The playing Slot gets a cinnabar ring, including when it is empty; the Stone itself never changes colour.
+- Queued Slots get a thin gold ring (`slot--queued`); the Slot approaching the Head during winding gets a hairline gold bar (`slot--approaching`), visually distinct from the queued gold ring and the gold dashed snap-target ring (`slot--glow`). The playing Slot gets a cinnabar ring, including when it is empty; the Stone itself never changes colour.
 - Playback handles looping internally: pre-schedules 4 iterations, extends dynamically, no gaps between loops.
 - Snap detection uses `findSnapTargetFromDOM()` (rendered `getBoundingClientRect()` positions), not the mathematical `findSnapTarget()`.
 - `PlaybackControl.updateSlots()` cancels future oscillators (beats ≥ currentBeat), re-schedules with new elements. Already-played beats unchanged.

@@ -3,7 +3,6 @@ import type { CSSProperties } from 'react';
 import type { ElementType, WheelMode } from './types';
 import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
 import { findSnapTargetFromDOM } from './geometry';
-import { haptic } from './audio';
 import type { WheelAction } from './types';
 
 const ELEMENTS: ElementType[] = ['earth', 'metal', 'wood', 'fire', 'water'];
@@ -54,9 +53,6 @@ function StonePalette({ selectedStone, onSelectStone, onClear, dispatch, wheelMo
       const snap = findSnapTargetFromDOM(cursorX, cursorY, SNAP_THRESHOLD_PX);
 
       if (snap) {
-        // Snap haptic only when the locked slot actually changes — never on
-        // every pointer move. No sound for snapping.
-        if (snapTargetSlotRef.current !== snap.slotIndex) haptic('snap');
         setGhostPosition({ x: snap.x, y: snap.y });
         setSnapTargetSlot(snap.slotIndex);
         snapTargetSlotRef.current = snap.slotIndex;

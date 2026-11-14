@@ -16,6 +16,7 @@ interface SlotProps {
   isSnapTarget?: boolean;
   isDraggedAway?: boolean;
   isApproaching?: boolean;
+  isPending?: boolean;
 }
 
 const EXIT_GHOST_MS = 80;
@@ -32,6 +33,7 @@ function Slot({
   isSnapTarget,
   isDraggedAway,
   isApproaching,
+  isPending,
 }: SlotProps) {
   const displayElement = isDraggedAway ? null : element;
 
@@ -73,6 +75,7 @@ function Slot({
     isSnapTarget ? 'slot--glow' : '',
     isCurrentlyPlaying ? 'slot--playing' : '',
     isApproaching ? 'slot--approaching' : '',
+    isPending ? 'slot--pending' : '',
     isDimmed ? 'slot--dimmed' : '',
   ]
     .filter(Boolean)
