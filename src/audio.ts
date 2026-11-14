@@ -7,6 +7,8 @@
  * The `t0` lookahead clock and rAF beat reporting are deliberately untouched.
  */
 
+import type { ElementType } from './types';
+
 type ContextCtor = new () => AudioContext;
 
 let audioCtx: AudioContext | null = null;
@@ -64,6 +66,131 @@ function audioNodes(): { ctx: AudioContext; out: AudioNode } | null {
   const ctx = tryGetAudioContext();
   if (!ctx) return null;
   return { ctx, out: masterGain ?? ctx.destination };
+}
+
+// ---------------------------------------------------------------------------
+// Element voices (Feedback 2: five material timbres)
+// ---------------------------------------------------------------------------
+
+/**
+ * One timbre per element. All are a single oscillator + one gain envelope
+ * (plus an optional low-pass), with the SAME peak gain so swapping a Stone
+ * never jumps in loudness. `decayFactor` scales the tail against the beat
+ * duration; the 金 upper partial is added on the same oscillator, never a 2nd.
+ */
+interface Timbre {
+  wave: OscillatorType;
+  attack: number;           // seconds — hard attack
+  decayFactor: number;      // × noteDuration
+  filterStart: number;      // Hz, low-pass cutoff
+  filterEnd: number | null; // Hz, optional downward sweep target
+  harmonic: number | null;  // 2nd-harmonic amplitude for 金, else null
+}
+
+const TIMBRES: Record<ElementType, Timbre> = {
+  earth: { wave: 'triangle',  attack: 0.008, decayFactor: 0.75, filterStart: 2000, filterEnd: null, harmonic: null },
+  metal: { wave: 'triangle',  attack: 0.002, decayFactor: 1.0,  filterStart: 4200, filterEnd: null, harmonic: 0.32 },
+  wood:  { wave: 'sawtooth',  attack: 0.003, decayFactor: 0.58, filterStart: 1500, filterEnd: 700,  harmonic: null },
+  fire:  { wave: 'sawtooth',  attack: 0.003, decayFactor: 0.5,  filterStart: 1200, filterEnd: null, harmonic: null },
+  water: { wave: 'sine',      attack: 0.015, decayFactor: 1.0,  filterStart: 900,  filterEnd: 500,  harmonic: null },
+};
+
+const VOICE_PEAK = 0.38;
+
+export interface Voice {
+  osc: OscillatorNode;
+  gain: GainNode;
+  filter: BiquadFilterNode | null;
+}
+
+/**
+ * The single source of a sounded Stone. Both the initial schedule and the
+ * hot-reload re-schedule in `playback.ts` call this factory, so a Stone edited
+ * mid-loop keeps exactly the same timbre. Key/octave transposition is applied
+ * by the caller via `getElementFrequencies()`; this function only shapes sound.
+ *
+ * Every optional Web Audio feature is feature-detected: a partial
+ * implementation (or the playback test's minimal mock, which has no
+ * createBiquadFilter / createPeriodicWave / setPeriodicWave) degrades to a
+ * plain oscillator voice rather than throwing, and each note creates exactly
+ * ONE oscillator (the 金 partial reuses it). Rests never reach this function.
+ */
+export function createVoice(
+  ctx: AudioContext,
+  element: ElementType,
+  freq: number,
+  startTime: number,
+  noteDuration: number,
+): Voice {
+  const timbre = TIMBRES[element] ?? TIMBRES.earth;
+  const out = getAudioOutput() ?? ctx.destination;
+
+  const osc = ctx.createOscillator();
+  osc.type = timbre.wave;
+  osc.frequency.setValueAtTime(freq, startTime);
+
+  // 金: a quiet 2nd harmonic on the SAME oscillator via setPeriodicWave.
+  // Feature-detected so the mock / partial Web Audio keeps the plain triangle.
+  if (timbre.harmonic !== null) {
+    try {
+      if (
+        typeof ctx.createPeriodicWave === 'function' &&
+        typeof osc.setPeriodicWave === 'function'
+      ) {
+        const imag = [0, 1, timbre.harmonic]; // DC, fundamental, 2nd partial
+        const real = [0, 0, 0];
+        osc.setPeriodicWave(ctx.createPeriodicWave(real, imag));
+      }
+    } catch {
+      /* partial Web Audio — keep the triangle set above */
+    }
+  }
+
+  const attackEnd = startTime + timbre.attack;
+  const decayEnd = startTime + noteDuration * timbre.decayFactor;
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(VOICE_PEAK, attackEnd);
+  gain.gain.exponentialRampToValueAtTime(0.001, decayEnd);
+
+  // Optional low-pass (gentle downward sweep for 木 / 水). Feature-detected
+  // and try/caught so a partial implementation degrades to an unfiltered voice.
+  let filter: BiquadFilterNode | null = null;
+  try {
+    if (typeof ctx.createBiquadFilter === 'function') {
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.setValueAtTime(timbre.filterStart, startTime);
+      if (timbre.filterEnd !== null) {
+        f.frequency.exponentialRampToValueAtTime(timbre.filterEnd, decayEnd);
+      }
+      filter = f;
+    }
+  } catch {
+    filter = null;
+  }
+
+  osc.connect(gain);
+  if (filter) {
+    gain.connect(filter);
+    filter.connect(out);
+  } else {
+    gain.connect(out);
+  }
+
+  osc.start(startTime);
+  osc.stop(decayEnd + 0.02); // small tail so the decay ramp completes cleanly
+
+  osc.onended = () => {
+    try { osc.disconnect(); } catch { /* already disconnected */ }
+    try { gain.disconnect(); } catch { /* already disconnected */ }
+    if (filter) {
+      try { filter.disconnect(); } catch { /* already disconnected */ }
+    }
+  };
+
+  return { osc, gain, filter };
 }
 
 /** Unlock/resume audio inside the first pointer-down gesture (mobile Chrome). */
