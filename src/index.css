@@ -228,9 +228,25 @@ body {
   stroke: var(--ink-gold);
   stroke-width: 0.8;
 }
-.wheel-container--winding .wheel-compass__arc,
-.wheel-container--tack-flash .wheel-compass__arc {
+.wheel-container--winding .wheel-compass__arc {
   stroke: var(--ink-paper);
+}
+/* The tack is one mechanical event: a brief cinnabar notch on the existing
+   arc. Winding already paints the arc paper-coloured, so the flash must be its
+   own, distinct 120ms cue. No new DOM, no gradient, glow or shadow. */
+.wheel-container--tack-flash .wheel-compass__arc {
+  animation: tack-flash-arc 0.12s ease-out;
+  transition: none;
+}
+@keyframes tack-flash-arc {
+  0% {
+    stroke: var(--ink-cinnabar);
+    stroke-width: 2.4;
+  }
+  100% {
+    stroke: var(--ink-paper);
+    stroke-width: 0.8;
+  }
 }
 .wheel-needle {
   z-index: 2;
@@ -286,28 +302,79 @@ body {
 .slot--queued {
   border-color: var(--ink-gold);
 }
-.slot--queued::after {
+.slot--playing {
+  border-color: var(--ink-cinnabar);
+}
+/* One always-present ring per slot: it settles in over ~120ms instead of
+   snapping on. Kept on ::after so it never collides with the approaching cue
+   (::before) or the snap dashed ring (the slot border itself). */
+.slot::after {
   content: "";
   position: absolute;
   inset: -5px;
   border: 0.5px solid var(--ink-gold);
   border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+  pointer-events: none;
 }
-.slot--playing {
-  border-color: var(--ink-cinnabar);
+.slot--queued::after {
+  opacity: 1;
+  transform: scale(1);
 }
 .slot--playing::after {
+  border-color: var(--ink-cinnabar);
+  opacity: 1;
+  transform: scale(1);
+}
+/* Hairline gold cue for the slot approaching the Head during winding: a short
+   solid bar, visually distinct from the queued ::after ring and the snap
+   dashed ring. Zero height — absolutely positioned. */
+.slot--approaching::before {
   content: "";
   position: absolute;
-  inset: -5px;
-  border: 0.5px solid var(--ink-cinnabar);
-  border-radius: 50%;
+  top: -8px;
+  left: 50%;
+  width: 14px;
+  height: 1px;
+  margin-left: -7px;
+  background: var(--ink-gold);
+  pointer-events: none;
 }
 .slot--glow {
   border: 0.5px dashed var(--ink-gold);
 }
 .slot--dimmed {
   opacity: 0.62;
+}
+/* A newly placed Stone settles (the core is re-keyed on element change); a
+   removed one leaves a short exit ghost (view-local state + timeout). */
+.slot__core {
+  animation: stone-settle 0.09s ease-out;
+}
+@keyframes stone-settle {
+  0% {
+    transform: scale(1.12);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.slot__core.slot__core--exiting {
+  animation: stone-exit 0.08s ease-out both;
+}
+@keyframes stone-exit {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(0.82);
+    opacity: 0;
+  }
 }
 
 /* Head: a cinnabar seal. The only per-beat event. */
@@ -326,10 +393,11 @@ body {
   justify-content: center;
 }
 .head__stone {
+  position: relative;
   width: 20px;
   height: 20px;
   border-radius: 0;
-  border-top: 2px solid var(--stone-color);
+  border-top: 2px solid var(--stone-color, transparent);
   background: transparent;
   display: flex;
   align-items: center;
@@ -337,18 +405,70 @@ body {
   font-size: 12px;
   color: var(--ink-paper);
 }
+/* A rest presses a quiet hollow "empty seal": dim line colour, dashed, and
+   low opacity — clearly weaker than a sounded beat. */
+.head__stone--empty {
+  border: 0.5px dashed var(--ink-line);
+  opacity: 0.55;
+}
+/* A real down press: small lift → compression → return, hard attack, ~120ms.
+   No fade-in from nothing: the seal is visible and physically presses. */
 .head--playing .head__stone {
-  animation: seal-press 0.18s ease-out;
+  animation: seal-press 0.12s ease-out;
 }
 @keyframes seal-press {
   0% {
-    transform: scale(1.16);
-    opacity: 0.5;
+    transform: translateY(-2px) scaleY(1.05);
+  }
+  50% {
+    transform: translateY(2px) scaleY(0.9);
   }
   100% {
-    transform: scale(1);
-    opacity: 1;
+    transform: translateY(0) scaleY(1);
   }
+}
+.head--playing .head__stone--empty {
+  animation: seal-press-empty 0.12s ease-out;
+}
+@keyframes seal-press-empty {
+  0% {
+    transform: translateY(-1px);
+  }
+  50% {
+    transform: translateY(1px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+/* A short cinnabar impression line left under the stamp, expanding + fading
+   over ~60ms. Absolutely positioned — no added layout height. */
+.head--playing .head__stone::after {
+  content: "";
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  width: 26px;
+  height: 1px;
+  margin-left: -13px;
+  background: var(--ink-cinnabar);
+  opacity: 0;
+  transform-origin: center;
+  animation: seal-impression 0.06s ease-out both;
+}
+@keyframes seal-impression {
+  0% {
+    transform: scaleX(0.2);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+/* The empty seal leaves no cinnabar impression — a rest stays a rest. */
+.head--playing .head__stone--empty::after {
+  content: none;
 }
 
 /* Ghost stone */
@@ -598,10 +718,62 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .head--playing .head__stone {
+  /* Every new displacement animation degrades to colour / opacity only (or is
+     disabled). States stay distinguishable by line style (solid ring, dashed
+     snap ring, solid approaching bar, dashed empty seal) as well as colour. */
+  .head--playing .head__stone,
+  .head--playing .head__stone--empty {
     animation: none;
+  }
+  .head--playing .head__stone::after {
+    animation: seal-impression-reduced 0.06s ease-out both;
+  }
+  .slot__core {
+    animation: stone-settle-reduced 0.09s ease-out;
+  }
+  .slot__core.slot__core--exiting {
+    animation: stone-exit-reduced 0.08s ease-out both;
+  }
+  .slot::after {
+    transform: none;
+    transition: opacity 0.12s ease-out;
+  }
+  .wheel-container--tack-flash .wheel-compass__arc {
+    animation: tack-flash-arc-reduced 0.12s ease-out;
   }
   .wheel-compass__arc {
     transition: none;
+  }
+}
+@keyframes seal-impression-reduced {
+  0% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes stone-settle-reduced {
+  0% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes stone-exit-reduced {
+  0% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes tack-flash-arc-reduced {
+  0% {
+    stroke: var(--ink-cinnabar);
+  }
+  100% {
+    stroke: var(--ink-paper);
   }
 }

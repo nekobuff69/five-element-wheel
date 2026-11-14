@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import type { ElementType, WheelMode } from './types';
 import { ELEMENT_COLORS, ELEMENT_SYMBOLS } from './types';
 
@@ -14,7 +15,10 @@ interface SlotProps {
   isCurrentlyPlaying: boolean;
   isSnapTarget?: boolean;
   isDraggedAway?: boolean;
+  isApproaching?: boolean;
 }
+
+const EXIT_GHOST_MS = 80;
 
 function Slot({
   index,
@@ -27,14 +31,48 @@ function Slot({
   isCurrentlyPlaying,
   isSnapTarget,
   isDraggedAway,
+  isApproaching,
 }: SlotProps) {
   const displayElement = isDraggedAway ? null : element;
+
+  // A short-lived, view-local ghost of a removed Stone. It is derived purely
+  // from the state diff (the `element` prop), so click-to-place, palette drag,
+  // slot-to-slot move and drag-off-Wheel all settle/exit identically — no
+  // per-path special cases and no new global state.
+  const [exitGhost, setExitGhost] = useState<ElementType | null>(null);
+  const prevElementRef = useRef<ElementType | null>(element);
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useLayoutEffect(() => {
+    const prev = prevElementRef.current;
+    prevElementRef.current = element;
+    if (prev !== null && element === null) {
+      setExitGhost(prev);
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+      exitTimerRef.current = setTimeout(
+        () => setExitGhost(null),
+        EXIT_GHOST_MS,
+      );
+    } else if (element !== null) {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+      setExitGhost(null);
+    }
+  }, [element]);
+
+  useEffect(
+    () => () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+    },
+    [],
+  );
+
   const className = [
     'slot',
     displayElement ? 'slot--filled' : 'slot--empty',
     isQueued ? 'slot--queued' : '',
     isSnapTarget ? 'slot--glow' : '',
     isCurrentlyPlaying ? 'slot--playing' : '',
+    isApproaching ? 'slot--approaching' : '',
     isDimmed ? 'slot--dimmed' : '',
   ]
     .filter(Boolean)
@@ -57,8 +95,21 @@ function Slot({
       style={style}
     >
       {displayElement && (
-        <span className="slot__core">
+        <span key={displayElement} className="slot__core">
           {ELEMENT_SYMBOLS[displayElement]}
+        </span>
+      )}
+      {exitGhost && !displayElement && (
+        <span
+          key={`exit-${exitGhost}`}
+          className="slot__core slot__core--exiting"
+          style={
+            {
+              '--stone-color': ELEMENT_COLORS[exitGhost],
+            } as CSSProperties
+          }
+        >
+          {ELEMENT_SYMBOLS[exitGhost]}
         </span>
       )}
     </div>
