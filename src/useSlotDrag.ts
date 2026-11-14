@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ElementType, WheelAction } from './types';
 import { findSnapTargetFromDOM } from './geometry';
+import { haptic } from './audio';
 
 const SNAP_THRESHOLD_PX = 30;
 
@@ -59,6 +60,9 @@ export function useSlotDrag(
       const snap = findSnapTargetFromDOM(cursorX, cursorY, SNAP_THRESHOLD_PX);
 
       if (snap && snap.slotIndex !== sourceIdx) {
+        // Snap haptic only when the locked slot actually changes — never on
+        // every pointer move. No sound for snapping.
+        if (snapTargetRef.current !== snap.slotIndex) haptic('snap');
         setGhostPosition({ x: snap.x, y: snap.y });
         setSnapTargetSlot(snap.slotIndex);
         snapTargetRef.current = snap.slotIndex;

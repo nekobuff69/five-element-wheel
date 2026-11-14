@@ -23,7 +23,10 @@ const RESTART_NOTE_MS = 1200;
  * `WheelState` and previous playing index, derives events on every change, and
  * dispatches them to sound, arc flash and haptics — one source for the tack's
  * sound, light and touch. Visual tokens (`tackFlash`, `restartNote`,
- * `pendingSlots`, `washToken`) are exposed for the view layer (later tickets).
+ * `pendingSlots`, `washToken`) are consumed by the view layer: Wheel reads the
+ * tack flash and PhraseTraceView reads the wash, wet-ink and restart tokens.
+ * The snap-changed haptic is the one exception: snap is transient drag state,
+ * emitted directly by the two drag hooks rather than derived from WheelState.
  */
 export function useFeedback(state: WheelState, playingIndex: number): FeedbackView {
   const prevStateRef = useRef<WheelState | null>(null);
@@ -61,6 +64,7 @@ export function useFeedback(state: WheelState, playingIndex: number): FeedbackVi
           break;
         case 'stone-placed':
           playPlacementSound('place');
+          haptic('place');
           break;
         case 'stone-removed':
           playPlacementSound('remove');
@@ -80,10 +84,16 @@ export function useFeedback(state: WheelState, playingIndex: number): FeedbackVi
           );
           break;
         case 'snap-changed':
-          // Snap haptics need the drag snap signal; reserved for a later ticket.
+          // Snap is transient drag state, not part of WheelState, so this
+          // signal is emitted straight from the two drag hooks (which own the
+          // snap-target refs) instead of through deriveFeedbackEvents. The
+          // snap haptic is fired there; this branch stays intentionally empty.
           break;
         case 'beat-read':
-          // aria-live / wet-ink clearing belongs to a later ticket.
+          // A sounded beat gets a short haptic; rests stay silent. The view
+          // layer owns the once-per-beat aria-live announcement, and the wet-ink
+          // mark clears via played marks plus the loop-iteration pending reset.
+          if (ev.hasStone) haptic('beat');
           break;
       }
     }

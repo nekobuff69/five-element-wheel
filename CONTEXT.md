@@ -32,6 +32,20 @@ The five elements map to the pentatonic scale (五音 / wǔ yīn). The **key** c
 | **Seal press** | The short hard-attack animation at the Head on each beat; the only per-beat event. Stones stay still. | Note pop, particle effect |
 | **Guide dialog** | The 玩法 card opened by the button under the title rule; contains the rules of play. It is a fixed overlay, not part of the main layout. | Help modal, tooltip, first-use hint |
 
+## Audiovisual feedback
+
+Feedback is derived from `WheelState` differences (see ADR-0012), never dispatched from the reducer or from view handlers. Sound, motion and touch share one event stream and use the vocabulary of carving, pressing, stamping and inking.
+
+| Term | Definition | Aliases to avoid |
+|------|-----------|-----------------|
+| **Crossing tick** | The very short (12–18ms) filtered noise burst emitted once per Slot as it crosses the Head during winding; a filled Slot is brighter than an empty one, and fast winds are throttled to a few ticks per frame. | Click, beep, hover sound |
+| **Element voice** | One material timbre per element (土 thick, 金 clear and long, 木 dry and short, 火 bright and sharp, 水 soft and flowing), produced by the single shared `createVoice()` factory so the initial schedule and a hot-reload re-schedule sound identical; peak gain is normalised across all five. | Instrument, sample, waveform, note pop |
+| **Empty seal** | The quiet, dim, dashed placeholder the Head presses on a rest; clearly weaker than a sounded beat, so a rest still reads as silence. | Rest icon, muted note, placeholder dot |
+| **Wash / re-ink** | At a loop-iteration boundary the phrase-trace marks group re-inks once (~180ms) while the grid, degree names and caption stay completely still — one written line per loop iteration. | Refresh, fade transition, reload animation |
+| **Wet ink / hot-reload pending** | A half-filled cinnabar mark (solid ring plus half disc) for a future beat edited mid-loop, visually distinct from an ordinary unplayed beat's dashed hollow and from the snap target's dashed ring; it clears once the beat sounds or at the next loop boundary. | Dirty flag, unsaved dot, pending highlight |
+
+The **derived feedback event stream** (`deriveFeedbackEvents`) is the single automated seam for this feature; `useFeedback` consumes it to drive sound, haptics and the tack flash, and exposes view tokens for the wash, wet-ink and restart inscription. Haptics (Android Chrome) are 8 / 20 / 5 / 4 / 8 ms for crossing, tack, snap, beat and placement, and are a no-op where `navigator.vibrate` is unavailable. Every motion has a `prefers-reduced-motion` colour / opacity alternative, states stay distinguishable by solid versus dashed line style as well as colour, and a polite live region announces the beat position once per beat.
+
 ## Wheel state machine
 
 | Term | Definition | Aliases to avoid |

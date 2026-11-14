@@ -14,6 +14,11 @@ export function useWheelPlayback(
 
   // Spring-back playback: start on springBack, cancel on cleanup
   useEffect(() => {
+    // Every fresh playback (a new phrase, a loop interrupt, or a parameter
+    // restart that re-runs this effect) must start from an unread position.
+    // Otherwise the drop from the previous phrase's last beat to 0 would be
+    // derived as a spurious loop-iteration / wash by useFeedback.
+    setSpringBackPlayingIndex(-1);
     if (state.mode !== 'springBack') return;
     const count = state.queuedSlotIndices.length;
     if (count === 0 || !state.direction) {
