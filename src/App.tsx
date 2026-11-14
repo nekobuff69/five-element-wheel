@@ -1,10 +1,11 @@
-import { useReducer, useRef, useState } from 'react';
+import { useReducer, useRef, useState, useEffect } from 'react';
 import { wheelReducer, initialWheelState } from './wheelReducer';
 import Wheel from './Wheel';
 import StonePalette from './StonePalette';
 import BPMControl from './BPMControl';
 import LoopToggle from './LoopToggle';
 import { useFitWheel } from './useFitWheel';
+import { unlockAudio } from './audio';
 
 const GUIDE_LINES = [
   '從頂部拖動五行石，置入輪盤外圍的圓形插槽，十個空位任意選擇。',
@@ -22,6 +23,14 @@ function App() {
   const [guideOpen, setGuideOpen] = useState(false);
   const appRef = useRef<HTMLDivElement>(null);
   useFitWheel(appRef);
+
+  // Unlock the single AudioContext inside the first pointer-down gesture
+  // (mobile browsers require a user gesture) — not on pointer-move.
+  useEffect(() => {
+    const onFirstPointerDown = () => unlockAudio();
+    document.addEventListener('pointerdown', onFirstPointerDown, { once: true });
+    return () => document.removeEventListener('pointerdown', onFirstPointerDown);
+  }, []);
 
   return (
     <div className="app" ref={appRef}>

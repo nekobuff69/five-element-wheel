@@ -5,10 +5,11 @@ import { SLOT_ANGLE_SPAN, SLOT_START_ANGLE } from './geometry';
 import Slot from './Slot';
 import Head from './Head';
 import PhraseTraceView from './PhraseTraceView';
-import { useRef, useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { useWheelGesture } from './useWheelGesture';
 import { useWheelPlayback } from './useWheelPlayback';
 import { useSlotDrag } from './useSlotDrag';
+import { useFeedback } from './useFeedback';
 
 interface WheelProps {
   state: WheelState;
@@ -51,6 +52,8 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
     state,
     dispatch,
   );
+  // Single derived feedback stream drives sound, haptics and the tack flash.
+  const { tackFlash } = useFeedback(state, springBackPlayingIndex);
   useWheelGesture(
     wheelRef,
     state.mode,
@@ -65,18 +68,6 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
     snapTargetSlot: slotDragSnapTarget,
     handleSlotPointerDown,
   } = useSlotDrag(dispatch);
-  const [showTackFlash, setShowTackFlash] = useState(false);
-
-  useEffect(() => {
-    if (state.mode === 'winding' && Math.abs(state.rotation) >= 360) {
-      setShowTackFlash(true);
-      const timer = setTimeout(() => setShowTackFlash(false), 300);
-      return () => clearTimeout(timer);
-    }
-    if (state.mode !== 'winding') {
-      setShowTackFlash(false);
-    }
-  }, [state.rotation, state.mode]);
 
   function getWheelStyle(): CSSProperties {
     if (state.mode === 'springBack') {
@@ -104,7 +95,7 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
     <>
       <div className="wheel-frame">
         <div
-          className={`wheel-container wheel-container--${state.mode}${showTackFlash ? ' wheel-container--tack-flash' : ''}`}
+          className={`wheel-container wheel-container--${state.mode}${tackFlash ? ' wheel-container--tack-flash' : ''}`}
           ref={wheelRef}
         >
           <div

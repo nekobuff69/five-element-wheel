@@ -1,54 +1,11 @@
 import { type ElementType, type WindDirection } from './types';
 import { getElementFrequencies } from './frequencies';
+import { getAudioContext, playTackSound } from './audio';
 
-let audioCtx: AudioContext | null = null;
-
-export function getAudioContext(): AudioContext {
-  if (!audioCtx) {
-    audioCtx = new AudioContext();
-  }
-  return audioCtx;
-}
-
-export function playTackSound(): void {
-  const ctx = getAudioContext();
-  if (ctx.state === 'suspended') {
-    ctx.resume();
-  }
-
-  const now = ctx.currentTime;
-
-  // 30ms noise burst
-  const bufferSize = Math.ceil(ctx.sampleRate * 0.03);
-  const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = noiseBuffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = (Math.random() * 2 - 1) * Math.max(0, 1 - i / bufferSize);
-  }
-  const noise = ctx.createBufferSource();
-  noise.buffer = noiseBuffer;
-
-  const noiseGain = ctx.createGain();
-  noiseGain.gain.setValueAtTime(0.3, now);
-  noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-
-  noise.connect(noiseGain).connect(ctx.destination);
-  noise.start(now);
-  noise.stop(now + 0.03);
-
-  // 800Hz sine blip
-  const osc = ctx.createOscillator();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(800, now);
-
-  const oscGain = ctx.createGain();
-  oscGain.gain.setValueAtTime(0.2, now);
-  oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-
-  osc.connect(oscGain).connect(ctx.destination);
-  osc.start(now);
-  osc.stop(now + 0.03);
-}
+// The single AudioContext and the tack sound now live in audio.ts (ADR-0006).
+// Re-export them so existing imports of `./playback` keep working. Note
+// scheduling below is intentionally untouched (belongs to a later ticket).
+export { getAudioContext, playTackSound };
 
 interface PlaybackConfig {
   queuedSlotIndices: number[];
