@@ -47,7 +47,7 @@ export function getAudioContext(): AudioContext {
 }
 
 /** Null-safe variant: never throws when Web Audio is missing. */
-export function tryGetAudioContext(): AudioContext | null {
+function tryGetAudioContext(): AudioContext | null {
   try {
     if (!getContextCtor()) return null;
     return getAudioContext();
@@ -57,7 +57,7 @@ export function tryGetAudioContext(): AudioContext | null {
 }
 
 /** The node all one-shot sounds connect to (master gain, or destination). */
-export function getAudioOutput(): AudioNode | null {
+function getAudioOutput(): AudioNode | null {
   const nodes = audioNodes();
   return nodes ? nodes.out : null;
 }
@@ -85,19 +85,20 @@ interface Timbre {
   filterStart: number;      // Hz, low-pass cutoff
   filterEnd: number | null; // Hz, optional downward sweep target
   harmonic: number | null;  // 2nd-harmonic amplitude for 金, else null
+  noiseTransient?: boolean; // 木: a very short noise burst at the note onset
 }
 
 const TIMBRES: Record<ElementType, Timbre> = {
   earth: { wave: 'triangle',  attack: 0.008, decayFactor: 0.75, filterStart: 2000, filterEnd: null, harmonic: null },
   metal: { wave: 'triangle',  attack: 0.002, decayFactor: 1.0,  filterStart: 4200, filterEnd: null, harmonic: 0.32 },
-  wood:  { wave: 'sawtooth',  attack: 0.003, decayFactor: 0.58, filterStart: 1500, filterEnd: 700,  harmonic: null },
+  wood:  { wave: 'sawtooth',  attack: 0.003, decayFactor: 0.35, filterStart: 1500, filterEnd: null, harmonic: null, noiseTransient: true },
   fire:  { wave: 'sawtooth',  attack: 0.003, decayFactor: 0.5,  filterStart: 1200, filterEnd: null, harmonic: null },
   water: { wave: 'sine',      attack: 0.015, decayFactor: 1.0,  filterStart: 900,  filterEnd: 500,  harmonic: null },
 };
 
 const VOICE_PEAK = 0.38;
 
-export interface Voice {
+interface Voice {
   osc: OscillatorNode;
   gain: GainNode;
   filter: BiquadFilterNode | null;
@@ -181,6 +182,30 @@ export function createVoice(
 
   osc.start(startTime);
   osc.stop(decayEnd + 0.02); // small tail so the decay ramp completes cleanly
+
+  // 木: a ~10ms noise transient at the onset, built from a buffer source —
+  // never a second oscillator, so playback.test.ts's exact oscillator count
+  // is preserved. makeNoise() feature-detects createBuffer/createBufferSource
+  // and returns null when absent; everything else is fully guarded so a
+  // partial Web Audio implementation or the minimal test mock degrades to the
+  // plain oscillator voice.
+  if (timbre.noiseTransient) {
+    try {
+      const src = makeNoise(ctx, 0.01);
+      if (src && typeof ctx.createGain === 'function') {
+        const transientGain = ctx.createGain();
+        transientGain.gain.setValueAtTime(0.0001, startTime);
+        transientGain.gain.linearRampToValueAtTime(VOICE_PEAK * 0.5, startTime + 0.001);
+        transientGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.01);
+        src.connect(transientGain);
+        transientGain.connect(out);
+        src.start(startTime);
+        src.stop(startTime + 0.01);
+      }
+    } catch {
+      /* partial Web Audio / minimal mock — keep the plain voice */
+    }
+  }
 
   osc.onended = () => {
     try { osc.disconnect(); } catch { /* already disconnected */ }
@@ -274,9 +299,6 @@ export function playCrossingTick(hasStone: boolean): void {
     gain.connect(out);
     src.start(ctx.currentTime);
     src.stop(ctx.currentTime + duration);
-
-    // Optional tiny 520Hz blip brightens a filled Slot.
-    if (hasStone) blip(ctx, out, 520, 0.02, 0.02, 'sine');
   } catch {
     /* Web Audio unavailable / partial — degrade silently */
   }
@@ -329,14 +351,12 @@ export function playTackSound(): void {
   }
 }
 
-export type HapticKind = 'cross' | 'tack' | 'snap' | 'beat' | 'place';
+type HapticKind = 'cross' | 'tack' | 'snap';
 
 const HAPTIC_MS: Record<HapticKind, number> = {
   cross: 8,
   tack: 20,
   snap: 5,
-  beat: 4,
-  place: 8,
 };
 
 /** Third feedback channel; a no-op where navigator.vibrate is unavailable. */

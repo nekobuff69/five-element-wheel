@@ -34,7 +34,7 @@ The five elements map to the pentatonic scale (五音 / wǔ yīn). The **key** c
 
 ## Audiovisual feedback
 
-Feedback is derived from `WheelState` differences (see ADR-0012), never dispatched from the reducer or from view handlers. Sound, motion and touch share one event stream and use the vocabulary of carving, pressing, stamping and inking.
+Feedback is derived from `WheelState` differences plus an explicit snap-target signal supplied by the drag hooks (see ADR-0012). Output channels are driven only by the derived stream, never directly by the reducer. Sound, motion and touch share one event stream and use the vocabulary of carving, pressing, stamping and inking.
 
 | Term | Definition | Aliases to avoid |
 |------|-----------|-----------------|
@@ -44,7 +44,7 @@ Feedback is derived from `WheelState` differences (see ADR-0012), never dispatch
 | **Wash / re-ink** | At a loop-iteration boundary the phrase-trace marks group re-inks once (~180ms) while the grid, degree names and caption stay completely still — one written line per loop iteration. | Refresh, fade transition, reload animation |
 | **Wet ink / hot-reload pending** | A half-filled cinnabar mark (solid ring plus half disc) for a future beat edited mid-loop, visually distinct from an ordinary unplayed beat's dashed hollow and from the snap target's dashed ring; it clears once the beat sounds or at the next loop boundary. | Dirty flag, unsaved dot, pending highlight |
 
-The **derived feedback event stream** (`deriveFeedbackEvents`) is the single automated seam for this feature; `useFeedback` consumes it to drive sound, haptics and the tack flash, and exposes view tokens for the wash, wet-ink and restart inscription. Haptics (Android Chrome) are 8 / 20 / 5 / 4 / 8 ms for crossing, tack, snap, beat and placement, and are a no-op where `navigator.vibrate` is unavailable. Every motion has a `prefers-reduced-motion` colour / opacity alternative, states stay distinguishable by solid versus dashed line style as well as colour, and a polite live region announces the beat position once per beat.
+The **derived feedback event stream** (`deriveFeedbackEvents`) is the single automated seam for this feature; `useFeedback` consumes it to drive sound, haptics and the tack flash, and exposes view tokens for the wash, wet-ink and restart inscription. Haptics (Android Chrome) are 8 / 20 / 5 ms for crossing, tack and snap-target changes, and are a no-op where `navigator.vibrate` is unavailable. Every motion has a `prefers-reduced-motion` colour / opacity alternative, states stay distinguishable by solid versus dashed line style as well as colour, and a polite live region announces the beat position once per beat.
 
 ## Wheel state machine
 

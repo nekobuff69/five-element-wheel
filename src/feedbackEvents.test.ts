@@ -269,3 +269,88 @@ describe('deriveFeedbackEvents — hot reload pending', () => {
     ]);
   });
 });
+
+describe('deriveFeedbackEvents — snap-changed signal', () => {
+  // The snap target is pointer-local state supplied as an explicit signal. A
+  // change should read as one magnet click, not a 60fps stream of events.
+  it('emits snap-changed with the new slot index when the target changes', () => {
+    const s = state();
+    expect(
+      deriveFeedbackEvents(s, s, {
+        playingIndex: -1,
+        previousPlayingIndex: -1,
+        snapTarget: 4,
+        previousSnapTarget: 3,
+      }),
+    ).toEqual([{ type: 'snap-changed', slotIndex: 4 }]);
+  });
+
+  it('emits no snap event when the target is unchanged, null, or absent', () => {
+    const s = state();
+    // unchanged
+    expect(
+      deriveFeedbackEvents(s, s, {
+        playingIndex: -1,
+        previousPlayingIndex: -1,
+        snapTarget: 4,
+        previousSnapTarget: 4,
+      }),
+    ).toEqual([]);
+    // released / no snap
+    expect(
+      deriveFeedbackEvents(s, s, {
+        playingIndex: -1,
+        previousPlayingIndex: -1,
+        snapTarget: null,
+        previousSnapTarget: 4,
+      }),
+    ).toEqual([]);
+    // no snap fields at all (backwards compatible with a plain playback signal)
+    expect(
+      deriveFeedbackEvents(s, s, { playingIndex: -1, previousPlayingIndex: -1 }),
+    ).toEqual([]);
+  });
+});
+
+describe('deriveFeedbackEvents — hot reload future beats', () => {
+  const empty = () => Array<WheelState['slots'][number]>(10).fill(null);
+  // Queue [9, 8, 7, 6, 5]; playingIndex 2 means beat 2 (slot 7) is sounding.
+  // A changed slot at queue position < 2 is a past beat, >= 2 is a future beat.
+  function editing(slotIndex: number): [WheelState, WheelState] {
+    const before = empty();
+    before[slotIndex] = 'earth';
+    const after = empty();
+    after[slotIndex] = 'metal';
+    return [
+      state({ mode: 'springBack', queuedSlotIndices: [9, 8, 7, 6, 5], slots: before }),
+      state({ mode: 'springBack', queuedSlotIndices: [9, 8, 7, 6, 5], slots: after }),
+    ];
+  }
+
+  it('suppresses hot-reload-pending for a beat already played', () => {
+    const [prev, next] = editing(9); // slot 9 is queue position 0 (past)
+    expect(
+      deriveFeedbackEvents(prev, next, {
+        playingIndex: 2,
+        previousPlayingIndex: 2,
+        snapTarget: null,
+        previousSnapTarget: null,
+      }),
+    ).toEqual([{ type: 'stone-placed', slotIndex: 9 }]);
+  });
+
+  it('emits hot-reload-pending for a future beat', () => {
+    const [prev, next] = editing(6); // slot 6 is queue position 3 (future)
+    expect(
+      deriveFeedbackEvents(prev, next, {
+        playingIndex: 2,
+        previousPlayingIndex: 2,
+        snapTarget: null,
+        previousSnapTarget: null,
+      }),
+    ).toEqual([
+      { type: 'stone-placed', slotIndex: 6 },
+      { type: 'hot-reload-pending', slotIndex: 6 },
+    ]);
+  });
+});

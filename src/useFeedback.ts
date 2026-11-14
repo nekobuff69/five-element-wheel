@@ -20,17 +20,23 @@ const RESTART_NOTE_MS = 1200;
 
 /**
  * The single consumer of the derived feedback stream. It holds the previous
- * `WheelState` and previous playing index, derives events on every change, and
- * dispatches them to sound, arc flash and haptics — one source for the tack's
- * sound, light and touch. Visual tokens (`tackFlash`, `restartNote`,
- * `pendingSlots`, `washToken`) are consumed by the view layer: Wheel reads the
- * tack flash and PhraseTraceView reads the wash, wet-ink and restart tokens.
- * The snap-changed haptic is the one exception: snap is transient drag state,
- * emitted directly by the two drag hooks rather than derived from WheelState.
+ * `WheelState`, previous playing index and previous snap target, derives events
+ * on every change, and dispatches them to sound, arc flash and haptics — one
+ * source for the tack's sound, light and touch. Visual tokens (`tackFlash`,
+ * `restartNote`, `pendingSlots`, `washToken`) are consumed by the view layer:
+ * Wheel reads the tack flash and PhraseTraceView reads the wash, wet-ink and
+ * restart tokens. The snap target is pointer-local state supplied by the two
+ * drag hooks as an explicit signal; its snap-changed event is derived from
+ * that signal and the snap haptic fires here, like every other output channel.
  */
-export function useFeedback(state: WheelState, playingIndex: number): FeedbackView {
+export function useFeedback(
+  state: WheelState,
+  playingIndex: number,
+  snapTarget: number | null,
+): FeedbackView {
   const prevStateRef = useRef<WheelState | null>(null);
   const prevPlayingRef = useRef<number>(-1);
+  const prevSnapRef = useRef<number | null>(null);
 
   const [tackFlash, setTackFlash] = useState(false);
   const [restartNote, setRestartNote] = useState<string | null>(null);
@@ -44,9 +50,12 @@ export function useFeedback(state: WheelState, playingIndex: number): FeedbackVi
     const events = deriveFeedbackEvents(prevStateRef.current, state, {
       playingIndex,
       previousPlayingIndex: prevPlayingRef.current,
+      snapTarget,
+      previousSnapTarget: prevSnapRef.current,
     });
     prevStateRef.current = state;
     prevPlayingRef.current = playingIndex;
+    prevSnapRef.current = snapTarget;
 
     for (const ev of events) {
       switch (ev.type) {
@@ -64,7 +73,6 @@ export function useFeedback(state: WheelState, playingIndex: number): FeedbackVi
           break;
         case 'stone-placed':
           playPlacementSound('place');
-          haptic('place');
           break;
         case 'stone-removed':
           playPlacementSound('remove');
@@ -84,20 +92,21 @@ export function useFeedback(state: WheelState, playingIndex: number): FeedbackVi
           );
           break;
         case 'snap-changed':
-          // Snap is transient drag state, not part of WheelState, so this
-          // signal is emitted straight from the two drag hooks (which own the
-          // snap-target refs) instead of through deriveFeedbackEvents. The
-          // snap haptic is fired there; this branch stays intentionally empty.
+          haptic('snap');
           break;
-        case 'beat-read':
-          // A sounded beat gets a short haptic; rests stay silent. The view
-          // layer owns the once-per-beat aria-live announcement, and the wet-ink
-          // mark clears via played marks plus the loop-iteration pending reset.
-          if (ev.hasStone) haptic('beat');
+        case 'beat-read': {
+          // The beat that just sounded is no longer wet ink: clear its pending
+          // mark so the chart returns to a clean written line. The view layer
+          // owns the once-per-beat aria-live announcement; rests stay silent.
+          const slotIndex = state.queuedSlotIndices[ev.queueIndex];
+          setPendingSlots((prev) =>
+            slotIndex === undefined ? prev : prev.filter((s) => s !== slotIndex),
+          );
           break;
+        }
       }
     }
-  }, [state, playingIndex]);
+  }, [state, playingIndex, snapTarget]);
 
   useEffect(
     () => () => {
