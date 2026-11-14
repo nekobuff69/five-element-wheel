@@ -53,7 +53,11 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
     dispatch,
   );
   // Single derived feedback stream drives sound, haptics and the tack flash.
-  const { tackFlash } = useFeedback(state, springBackPlayingIndex);
+  // View tokens feed the phrase-trace wash, wet-ink and restart inscription.
+  const { tackFlash, washToken, pendingSlots, restartNote } = useFeedback(
+    state,
+    springBackPlayingIndex,
+  );
   useWheelGesture(
     wheelRef,
     state.mode,
@@ -267,6 +271,9 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
         slots={state.slots}
         playingIndex={springBackPlayingIndex}
         mode={state.mode}
+        washToken={washToken}
+        pendingSlots={pendingSlots}
+        restartNote={restartNote}
       />
     </>
   );

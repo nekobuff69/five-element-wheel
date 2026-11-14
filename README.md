@@ -4,7 +4,7 @@ The Chinese five elements (五行 / wǔ xíng) mapped to a pentatonic scale. Pla
 
 Built around the pentatonic scale (五音 / wǔ yīn): **Earth** (root), **Metal** (M2), **Wood** (M3), **Fire** (P5), **Water** (M6). The intervals form a pentatonic scale in any key. No wrong notes.
 
-The interface is a minimal ink compass: lacquer-dark ground, paper-coloured serif type, hairline gold rules, one cinnabar seal at the reading point. The main screen fits exactly one mobile viewport and never scrolls.
+The interface is a minimal ink compass: lacquer-dark ground, paper-coloured serif type, hairline gold rules, one cinnabar seal at the reading point. The main screen fits exactly one mobile viewport and never scrolls. Short, carved feedback — sound, motion and touch — is derived from state changes (see `CONTEXT.md` and ADR-0012).
 
 ---
 
@@ -56,6 +56,8 @@ Drag the wheel clockwise or counter-clockwise. As each slot crosses the fixed **
 
 Drag further to queue more slots. A full rotation (360°) queues all 10. A **tack sound** (noise burst + sine blip) confirms you've reached the limit. The wheel is capped at ±360°. A small 順 / 逆 label shows the visual read order, which is the opposite of the finger's wind direction (see `CONTEXT.md`).
 
+Each Slot crossing the Head also emits a light **crossing tick** — a filled Slot sounds brighter than an empty one, and fast winds are throttled so a quick drag does not become a burst of noise. Reaching the limit fires one deliberately heavier **tack** whose sound, compass-arc flash and haptic all come from a single event.
+
 #### 3. Release to Play
 
 Release the wheel. It **springs back** to its rest position while playing queued slots in encounter order:
@@ -65,6 +67,8 @@ Release the wheel. It **springs back** to its rest position while playing queued
 - Spring-back duration = `queuedSlots × (60 ÷ BPM)` seconds.
 
 The **Head** is a cinnabar square seal showing the character of the stone currently being read; it is empty on a rest. Every slot — including an empty one — lights a cinnabar ring when its beat is read. Non-playing filled slots stay slightly dimmed; the stone itself never changes colour.
+
+Each element has its own **material voice** (thick 土, clear 金, dry 木, bright 火, soft 水), all produced by one shared voice factory so a Stone edited mid-loop keeps exactly the same timbre. Peak loudness is normalised across all five, all sound passes through a single master gain with no reverb, and rests and loop boundaries stay silent.
 
 #### 4. Loop Mode
 
@@ -77,6 +81,8 @@ Drag the wheel during playback to interrupt the current sequence and queue a new
 #### 6. Phrase Trace & Guide
 
 Below the Wheel, an ink chart draws the phrase you just wrote: ten beats on the horizontal axis, the five pentatonic degrees (宮商角徵羽) on the vertical. Sounded stones leave cinnabar marks joined by a hairline gold stroke; a rest breaks the stroke. Only the marks refresh at each loop iteration — the grid, degree names, and beat readout stay still.
+
+At each loop iteration the written line **washes / re-inks** once (~180ms) while the grid, degree names and beat readout stay perfectly still. A future beat edited mid-loop shows a **wet-ink** half-filled cinnabar mark, distinct from an ordinary unplayed beat and from the snap target's dashed ring; it clears once that beat sounds. When a BPM, key, octave or loop change restarts the phrase from beat 1, a short **重起 · …** inscription replaces the beat readout for about 1.2s, then returns to the beat readout on its own — no new row, no added height. A polite, visually hidden live region announces the beat position once per beat.
 
 A **玩法** button under the title rule opens a guide dialog with the rules of play. It does not take part in the main layout.
 
@@ -92,6 +98,10 @@ A **玩法** button under the title rule opens a guide dialog with the rules of 
 
 All controls work during playback. Changing BPM, key, octave, or loop cancels the current playback and restarts the phrase from beat 1; only stone edits are hot-reloaded into future beats.
 
+#### 8. Feedback & Accessibility
+
+Feedback is derived from state differences (see `CONTEXT.md` and ADR-0012) and delivered over three channels: sound, short hard-attack motion (always shorter than the shortest beat), and touch. Short **haptics** mark winding crossings, the tack, snap-target changes (only when the target actually changes), sounded beats and Stone placement; on platforms without vibration (for example iOS Safari), sound and visuals still carry the same information. With **reduced motion** enabled, every displacement animation falls back to a colour or opacity change, and states stay distinguishable by solid versus dashed line style as well as colour. No cue adds layout height, so the Wheel keeps its size on short viewports.
+
 ---
 
 ## Technical Stack
@@ -100,13 +110,13 @@ All controls work during playback. Changing BPM, key, octave, or loop cancels th
 |-------|-----------|
 | Framework | Vite 6 + React 18 + TypeScript (strict mode) |
 | State | Single `useReducer`, no external library |
-| Audio | Native Web Audio API (OscillatorNode triangle wave + GainNode pluck envelope) |
+| Audio | Single native AudioContext + master gain; five element voices via a shared createVoice factory; one-shot tick / tack / placement sounds; optional navigator.vibrate haptics |
 | Styling | Plain CSS with custom properties, BEM-ish naming, no gradients or glows in the ink theme |
 | Interaction | Raw pointer events, angular-only drag for wheel, document-level for stone drag |
 | Rotation | CSS `transform: rotate()` with inline transition override for spring-back (ADR-0002) |
 | Layout | Runtime viewport fitting of the fixed 360px Wheel coordinate system (ADR-0011) |
 | PWA | `vite-plugin-pwa` with workbox `generateSW`, offline precache |
-| Testing | Vitest 2 + jsdom, 120 tests across 6 files |
+| Testing | Vitest 2 + jsdom, 142 tests across 7 files |
 
 ### Architecture (flat `src/`)
 
@@ -118,7 +128,11 @@ src/
   frequencies.ts               — getElementFrequencies() pure music theory
   wheelReducer.ts              — pure reducer + initialWheelState (handles all actions)
   wheelReducer.test.ts         — 84 unit tests (state machine + actions + key/octave)
-  playback.ts                  — AudioContext singleton, tack sound, rAF-scheduled engine
+  audio.ts                     — single AudioContext + master gain, element voices, one-shots, haptics
+  feedbackEvents.ts            — deriveFeedbackEvents() pure state-diff to feedback events
+  feedbackEvents.test.ts       — 22 tests for the single derived-event seam
+  useFeedback.ts               — consumer: sound, haptics, tack flash, view tokens
+  playback.ts                  — rAF-scheduled engine; re-exports AudioContext / tack / createVoice
   playback.test.ts             — 6 updateSlots tests
   detection.test.ts            — 10 slot-crossing detection tests
   direction-bias.test.ts       — 3 wind-direction tests
@@ -126,14 +140,14 @@ src/
   phraseTrace.ts               — buildPhraseTrace() pure computation
   phraseTrace.test.ts          — 13 phrase-trace tests
   useWheelGesture.ts           — pointer-drag gesture hook (angular delta + commit threshold)
-  useWheelPlayback.ts          — hook: tack detection/sound, spring-back lifecycle, hot-reload sync
+  useWheelPlayback.ts          — hook: spring-back lifecycle, hot-reload sync
   useSlotDrag.ts               — hook: drag an existing Stone between Slots or off the Wheel
   useFitWheel.ts               — hook: fit the 360px Wheel into the remaining viewport height
   geometry.ts                  — getSlotPosition(), findSnapTarget(), findSnapTargetFromDOM(), angle constants
   Wheel.tsx                    — compass arc, Slots, Head, needle, ghost stone, phrase trace
   Slot.tsx                     — empty/filled/queued/playing/dimmed/snap-target states
   Head.tsx                     — cinnabar square seal at 6 o'clock
-  PhraseTraceView.tsx          — ink chart: 10 beats x 5 degrees, static grid, clearing marks
+  PhraseTraceView.tsx          — ink chart: 10 beats x 5 degrees, static grid, washing marks
   StonePalette.tsx             — 5 mineral Stones + 歸零 + palette drag gesture
   LoopToggle.tsx               — 循環 checkbox
   BPMControl.tsx               — 調 / 八度 / 拍速 controls
@@ -142,7 +156,7 @@ src/
 
 ### Key Architecture Decisions
 
-The state machine has 3 modes: `ready` → `winding` → `springBack`. Tack is derived from rotation (≥ 360°), not stored as a mode. All state transitions go through a pure reducer: deterministic, testable, no side effects.
+The state machine has 3 modes: `ready` → `winding` → `springBack`. Tack is derived from rotation (≥ 360°), not stored as a mode. All state transitions go through a pure reducer: deterministic, testable, no side effects. Feedback events are derived from state differences by `deriveFeedbackEvents()` and consumed by `useFeedback()`; the reducer is never an event source (ADR-0012).
 
 Audio timing comes from `AudioContext.currentTime`, synced to the visual frame loop via `requestAnimationFrame`. During loop playback, `PlaybackControl.updateSlots()` cancels future oscillators and re-schedules with new elements. Already-played beats are left alone.
 
@@ -176,7 +190,7 @@ Opens at `http://localhost:5173/` (or next available port).
 | `bun run dev` | Start dev server with hot reload |
 | `bun run build` | Type-check and build to `dist/` |
 | `bun run preview` | Preview production build locally |
-| `bun run test` | Run full test suite (120 tests) |
+| `bun run test` | Run full test suite (142 tests) |
 | `bunx tsc --noEmit` | Type check without emitting |
 
 ### Project Dependencies
@@ -212,7 +226,7 @@ Output goes to `dist/`. The build produces a fully offline-capable PWA with serv
 
 ### Testing Philosophy
 
-The suite has 120 tests in six files: reducer purity and action guards (`wheelReducer.test.ts`, 84), playback `updateSlots` (`playback.test.ts`, 6), slot-crossing detection (`detection.test.ts`, 10), wind-direction bias (`direction-bias.test.ts`, 3), visual feedback states (`visual-feedback.test.ts`, 4), and the pure phrase-trace computation (`phraseTrace.test.ts`, 13). The phrase-trace computation is the single automated seam for the ink theme; CSS and SVG rendering are verified visually, not asserted in tests.
+The suite has 142 tests in seven files: reducer purity and action guards (`wheelReducer.test.ts`, 84), the derived feedback-event seam (`feedbackEvents.test.ts`, 22), playback `updateSlots` (`playback.test.ts`, 6), slot-crossing detection (`detection.test.ts`, 10), wind-direction bias (`direction-bias.test.ts`, 3), visual feedback states (`visual-feedback.test.ts`, 4), and the pure phrase-trace computation (`phraseTrace.test.ts`, 13). `deriveFeedbackEvents` is the single automated seam for the audiovisual-feedback feature; CSS, SVG rendering, timbre and haptics are verified visually and by ear, not asserted in tests, per project convention.
 
 ```bash
 bun run test
