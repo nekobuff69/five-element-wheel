@@ -1,10 +1,11 @@
 import { type ElementType, type WindDirection } from './types';
 import { getElementFrequencies } from './frequencies';
-import { getAudioContext, playTackSound } from './audio';
+import { getAudioContext, playTackSound, createVoice } from './audio';
 
-// The single AudioContext and the tack sound now live in audio.ts (ADR-0006).
-// Re-export them so existing imports of `./playback` keep working. Note
-// scheduling below is intentionally untouched (belongs to a later ticket).
+// The single AudioContext, the tack sound, and the element voice factory all
+// live in audio.ts (ADR-0006). Re-export them so existing imports of
+// `./playback` keep working. Both note paths below share `createVoice()` so a
+// Stone edited mid-loop keeps exactly the same timbre (Feedback 2).
 export { getAudioContext, playTackSound };
 
 interface PlaybackConfig {
@@ -35,6 +36,7 @@ interface OscillatorInfo {
   osc: OscillatorNode;
   gain: GainNode;
   slotIndex: number;
+  filter?: BiquadFilterNode | null;
 }
 
 export interface PlaybackControl {
@@ -69,37 +71,21 @@ export function startPlayback(
   const freqMap = getElementFrequencies(key, octave);
   const oscillators: (OscillatorInfo | null)[] = [];
 
-  // Schedule a single note at absolute beat index
+  // Schedule a single note at absolute beat index. All sound shaping lives in
+  // audio.ts's createVoice(); the initial schedule and hot reload share it, so
+  // a Stone edited mid-loop keeps exactly the same timbre.
   function scheduleNote(absoluteBeat: number, slotIndex: number, element: ElementType): void {
     const freq = freqMap[element];
     if (freq == null) return;
 
     const startTime = t0 + absoluteBeat * beatInterval;
-    const endTime = startTime + noteDuration;
-
-    const osc = ctx.createOscillator();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(freq, startTime);
-
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0, t0);
-    gain.gain.linearRampToValueAtTime(0.4, startTime + 0.005);
-    gain.gain.exponentialRampToValueAtTime(0.001, endTime);
-
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(startTime);
-    osc.stop(endTime);
-
-    osc.onended = () => {
-      osc.disconnect();
-      gain.disconnect();
-    };
+    const voice = createVoice(ctx, element, freq, startTime, noteDuration);
 
     // Ensure oscillators array is large enough
     while (oscillators.length <= absoluteBeat) {
       oscillators.push(null);
     }
-    oscillators[absoluteBeat] = { osc, gain, slotIndex };
+    oscillators[absoluteBeat] = { ...voice, slotIndex };
   }
 
   // Playback state — initialized before scheduling so scheduleIteration reads pb.slots
@@ -189,6 +175,7 @@ export function startPlayback(
         try { existing.osc.stop(); } catch {}
         try { existing.osc.disconnect(); } catch {}
         try { existing.gain.disconnect(); } catch {}
+        if (existing.filter) { try { existing.filter.disconnect(); } catch {} }
       }
 
       if (!newElement) {
@@ -202,30 +189,13 @@ export function startPlayback(
         continue;
       }
 
+      // Hot reload re-schedules through the SAME voice factory as scheduleNote,
+      // so the edited Stone keeps its timbre on every future iteration.
       const noteDuration = pb.beatInterval * 0.6;
       const baseTime = pb.t0 + absBeat * pb.beatInterval;
       const startTime = Math.max(baseTime, ctx.currentTime + 0.01);
-      const endTime = startTime + noteDuration;
-
-      const osc = ctx.createOscillator();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, startTime);
-
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0, pb.t0);
-      gain.gain.linearRampToValueAtTime(0.4, startTime + 0.005);
-      gain.gain.exponentialRampToValueAtTime(0.001, endTime);
-
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(startTime);
-      osc.stop(endTime);
-
-      osc.onended = () => {
-        osc.disconnect();
-        gain.disconnect();
-      };
-
-      pb.oscillators[absBeat] = { osc, gain, slotIndex };
+      const voice = createVoice(ctx, newElement, freq, startTime, noteDuration);
+      pb.oscillators[absBeat] = { ...voice, slotIndex };
     }
 
     pb.slots = [...newSlots];
@@ -245,6 +215,7 @@ export function startPlayback(
           try { info.osc.stop(); } catch {}
           try { info.osc.disconnect(); } catch {}
           try { info.gain.disconnect(); } catch {}
+          if (info.filter) { try { info.filter.disconnect(); } catch {} }
         }
       }
     },
