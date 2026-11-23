@@ -44,7 +44,14 @@ function App() {
           title="玩法"
           onClick={() => setGuideOpen(true)}
         >
-          ？
+          <svg
+            className="guide-trigger__icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M10.3 14.8 L10.3 12.7 C10.4 11.8 11 11.2 11.9 10.5 C12.9 9.7 13.4 9.2 13.4 8.3 C13.4 7.5 12.8 7 12.1 7 C11.4 7 10.9 7.5 10.9 8.3 L9.1 8.3 C9.1 5.9 10.4 4.6 12.2 4.6 C14.1 4.6 15.4 6 15.4 8.3 C15.4 10.4 14 11.2 12.8 12.2 C12.2 12.7 12.1 13.2 12.1 14.8 Z" />
+            <circle cx="12.2" cy="17.7" r="1.15" />
+          </svg>
         </button>
       </header>
 

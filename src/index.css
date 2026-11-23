@@ -88,11 +88,16 @@ body {
   border-radius: 50%;
   background: transparent;
   color: var(--ink-gold);
-  font-family: var(--font-serif);
-  font-size: 15px;
-  line-height: 1;
   cursor: pointer;
   transition: border-color 0.2s, color 0.2s;
+}
+/* A vector glyph keeps its ink centred in every CJK font stack. A fullwidth
+   text ？ carries its ink upper-left of the em box and drifts with letter-spacing. */
+.guide-trigger__icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
 }
 .guide-trigger:hover {
   border-color: var(--ink-gold);
