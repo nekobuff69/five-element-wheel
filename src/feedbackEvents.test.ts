@@ -50,6 +50,23 @@ describe('deriveFeedbackEvents — winding crossings', () => {
       { type: 'slot-crossed', slotIndex: 5, hasStone: false },
     ]);
   });
+
+  it('ticks a reverse crossing that unqueues a slot', () => {
+    const prev = state({ mode: 'winding', queuedSlotIndices: [9, 8, 7] });
+    const next = state({ mode: 'winding', queuedSlotIndices: [9, 8] });
+    expect(deriveFeedbackEvents(prev, next)).toEqual([
+      { type: 'slot-crossed', slotIndex: 7, hasStone: false },
+    ]);
+  });
+
+  it('ticks several reverse crossings in LIFO order', () => {
+    const prev = state({ mode: 'winding', queuedSlotIndices: [9, 8, 7] });
+    const next = state({ mode: 'winding', queuedSlotIndices: [9] });
+    expect(deriveFeedbackEvents(prev, next)).toEqual([
+      { type: 'slot-crossed', slotIndex: 7, hasStone: false },
+      { type: 'slot-crossed', slotIndex: 8, hasStone: false },
+    ]);
+  });
 });
 
 describe('deriveFeedbackEvents — tack', () => {

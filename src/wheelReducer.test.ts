@@ -316,7 +316,7 @@ describe('WIND slot queuing', () => {
     // delta=36 → only slot 9 crosses 180° (slot 8 at 152° hasn't reached 180°)
     const s = cw(initialWheelState, 36);
     expect(s.queuedSlotIndices).toEqual([9]);
-    // After slot 9 is queued, glow moves to next approaching slot (8)
+    // After slot 9 is queued, slot 8 becomes the next capture candidate
     expect(s.currentSlotAtHead).toBe(8);
   });
 
@@ -324,7 +324,7 @@ describe('WIND slot queuing', () => {
     // delta=-36 → rotation=-36 → head slot = 0
     const s = ccw(initialWheelState, 36);
     expect(s.queuedSlotIndices).toEqual([0]);
-    // After slot 0 is queued, glow moves to next approaching slot (1)
+    // After slot 0 is queued, slot 1 becomes the next capture candidate
     expect(s.currentSlotAtHead).toBe(1);
   });
 
@@ -375,11 +375,11 @@ describe('WIND slot queuing', () => {
     expect(s.queuedSlotIndices).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
-  it('avoids duplicate slot entries when winding past already-queued slots', () => {
+  it('keeps the queue unchanged on a small reverse that does not cross the Head', () => {
     // Wind +36: only slot 9 crosses 180° → [9]
     const a = cw(initialWheelState, 36);
-    // Wind -10 → rotation=26, no new crossings → [9]
-    const b = wheelReducer(a, { type: 'WIND', delta: -10 });
+    // Wind -5 → rotation=31, slot 9 sits at 181°, still past the Head → [9]
+    const b = wheelReducer(a, { type: 'WIND', delta: -5 });
     expect(b.queuedSlotIndices).toEqual([9]);
   });
 
@@ -387,6 +387,50 @@ describe('WIND slot queuing', () => {
     // delta=0: no movement, no slot crosses 180°
     const s = wheelReducer(initialWheelState, { type: 'WIND', delta: 0 });
     expect(s.queuedSlotIndices).toEqual([]);
+  });
+
+  it('unqueues one slot per reverse crossing, last added first', () => {
+    let s = cw(initialWheelState, 36); // [9]
+    s = cw(s, 36); // [9,8]
+    s = cw(s, 36); // [9,8,7]
+    expect(s.queuedSlotIndices).toEqual([9, 8, 7]);
+
+    s = ccw(s, 36); // slot 7 crosses back → [9,8]
+    expect(s.queuedSlotIndices).toEqual([9, 8]);
+    s = ccw(s, 36); // slot 8 crosses back → [9]
+    expect(s.queuedSlotIndices).toEqual([9]);
+    s = ccw(s, 36); // slot 9 crosses back → []
+    expect(s.queuedSlotIndices).toEqual([]);
+  });
+
+  it('unqueues CCW-added slots when winding back CW', () => {
+    let s = ccw(initialWheelState, 36); // [0]
+    s = ccw(s, 36); // [0,1]
+    expect(s.queuedSlotIndices).toEqual([0, 1]);
+
+    s = cw(s, 36); // slot 1 crosses back → [0]
+    expect(s.queuedSlotIndices).toEqual([0]);
+    s = cw(s, 36); // slot 0 crosses back → []
+    expect(s.queuedSlotIndices).toEqual([]);
+  });
+
+  it('re-queues an unqueued slot at the tail, preserving encounter order', () => {
+    let s = cw(initialWheelState, 36); // [9]
+    s = cw(s, 36); // [9,8]
+    s = ccw(s, 36); // [9]
+    expect(s.queuedSlotIndices).toEqual([9]);
+
+    s = cw(s, 36); // slot 8 crosses again, appended at the tail
+    expect(s.queuedSlotIndices).toEqual([9, 8]);
+  });
+
+  it('unqueues several slots on a fast reverse wind and keeps a contiguous arc', () => {
+    let s = initialWheelState;
+    for (let i = 0; i < 5; i++) s = cw(s, 36); // [9,8,7,6,5]
+    expect(s.queuedSlotIndices).toEqual([9, 8, 7, 6, 5]);
+
+    const back = wheelReducer(s, { type: 'WIND', delta: -108 });
+    expect(back.queuedSlotIndices).toEqual([9, 8]);
   });
 });
 
@@ -670,11 +714,11 @@ describe('edge cases', () => {
     expect(s.queuedSlotIndices).toHaveLength(2);
   });
 
-  it('RELEASE captures approaching slot within 10° of head', () => {
+  it('RELEASE captures candidate slot within 10° of head', () => {
     // Wind CCW by 25° → slot 0 goes from 210° to 185° (5° above head)
-    // Slot is glowing but hasn't technically crossed yet
+    // Slot is the capture candidate but hasn't technically crossed yet
     const wound = ccw(initialWheelState, 25);
-    expect(wound.currentSlotAtHead).toBe(0); // Slot 0 is glowing
+    expect(wound.currentSlotAtHead).toBe(0); // Slot 0 is the capture candidate
     expect(wound.queuedSlotIndices).not.toContain(0); // But not queued yet
 
     // Release should capture it since it's within 10° of head

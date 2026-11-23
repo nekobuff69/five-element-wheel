@@ -201,10 +201,16 @@ function deriveCrossings(prev: WheelState, next: WheelState): FeedbackEvent[] {
   ) {
     prefix++;
   }
-  let growth = next.queuedSlotIndices.slice(prefix);
+  const growth = next.queuedSlotIndices.slice(prefix);
+  // A reverse crossing removes a slot from the queue. Undo is LIFO, so the
+  // queue tail leaves first — reverse the removed set to recover tick order.
+  const removed = baseline
+    .filter((s) => !next.queuedSlotIndices.includes(s))
+    .reverse();
+  const crossed = [...removed, ...growth];
   // Throttle fast winds: at most 3 ticks per frame, keep the latest in order.
-  if (growth.length > 3) growth = growth.slice(-3);
-  return growth.map((slotIndex) => ({
+  const limited = crossed.length > 3 ? crossed.slice(-3) : crossed;
+  return limited.map((slotIndex) => ({
     type: 'slot-crossed' as const,
     slotIndex,
     hasStone: next.slots[slotIndex] != null,

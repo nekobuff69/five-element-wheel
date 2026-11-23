@@ -306,8 +306,8 @@ body {
   border-color: var(--ink-cinnabar);
 }
 /* One always-present ring per slot: it settles in over ~120ms instead of
-   snapping on. Kept on ::after so it never collides with the approaching cue
-   (::before) or the snap dashed ring (the slot border itself). */
+   snapping on. Kept on ::after so it never collides with the snap dashed ring
+   (the slot border itself). */
 .slot::after {
   content: "";
   position: absolute;
@@ -328,26 +328,12 @@ body {
   opacity: 1;
   transform: scale(1);
 }
-/* Hairline gold cue for the slot approaching the Head during winding: a short
-   solid bar, visually distinct from the queued ::after ring and the snap
-   dashed ring. Zero height — absolutely positioned. */
-.slot--approaching::before {
-  content: "";
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  width: 14px;
-  height: 1px;
-  margin-left: -7px;
-  background: var(--ink-gold);
-  pointer-events: none;
-}
 .slot--glow {
   border: 0.5px dashed var(--ink-gold);
 }
 /* Wet ink: a hot-reloaded future beat. A thin dashed cinnabar ring drawn as an
    outline — zero layout height and no pseudo-element, so it never collides
-   with the approaching ::before bar or the queued/playing ::after rings.
+   with the queued/playing ::after rings.
    Cinnabar dashed is distinct from the gold dashed snap border. Static, so no
    reduced-motion alternative is needed. */
 .slot--pending {
@@ -802,8 +788,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   /* Every new displacement animation degrades to colour / opacity only (or is
      disabled). States stay distinguishable by line style (solid ring, dashed
-     snap ring, solid approaching bar, dashed empty seal, solid wet-ink half
-     mark, dashed pending hollow) as well as colour. */
+     snap ring, dashed empty seal, solid wet-ink half mark, dashed pending
+     hollow) as well as colour. */
   .head--playing .head__stone,
   .head--playing .head__stone--empty {
     animation: none;

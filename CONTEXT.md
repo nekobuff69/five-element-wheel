@@ -64,7 +64,7 @@ The **derived feedback event stream** (`deriveFeedbackEvents`) is the single aut
 | **PLACE_STONE** | Place a stone in a slot; uses `action.element` if provided (stone drag), else falls back to `state.selectedStone` (click-to-place). Valid in `ready` and `springBack` modes. |
 | **REMOVE_STONE** | Remove a stone from a slot. Triggered by clicking a filled slot with the same stone selected, or by dragging a stone off the wheel. Valid in `ready` and `springBack` modes. |
 | **RESET** | Reset entire app to initial state via the 歸零 button. Returns full `initialWheelState` (including BPM, loop, key, and octave). Valid in any mode. |
-| **WIND** | Pointer-move delta applied to wheel rotation; queues slots as they cross the head. Valid in `ready`, `winding`, and `springBack` (interrupts loop). |
+| **WIND** | Pointer-move delta applied to wheel rotation. A Slot crossing the Head forward enters the queue; one crossing back leaves it. Valid in `ready`, `winding`, and `springBack` (interrupts loop). |
 | **RELEASE** | Pointer up; transitions WINDING → SPRING_BACK |
 | **COMPLETE** | Dispatched by the playback `onComplete` callback. Returns to READY preserving slots, stones, BPM, key, and octave. |
 | **SET_BPM** | Slider change; updates BPM between 120–200 |
@@ -79,12 +79,13 @@ The **derived feedback event stream** (`deriveFeedbackEvents`) is the single aut
 | **Spring-back** | The automatic return of the wheel to its rest position (0°) after release; duration = `queuedSlotCount × (60 / BPM)` seconds. First spring-back uses CSS transition synced to audio. | Unwinding, playback, return |
 | **Loop** | Automatic replay of the melody without gaps. One `startPlayback()` call pre-schedules multiple iterations and extends dynamically; the wheel stays at rest. Stone edits apply to all future beats across iterations. | Auto-repeat, cycle |
 | **Loop iteration** | One complete playback cycle during loop. All iterations are scheduled continuously — no gaps between them. Stone edits apply immediately to all future beats. | Pass, cycle, repetition |
-| **Hot reload** | Mid-playback stone edits take effect on future beats. `PlaybackControl.updateSlots()` cancels oscillators for beats ≥ current, re-schedules with new elements. Already-played beats unchanged. | Live edit, real-time update |
+| **Hot reload** | Mid-playback stone edits take effect on future beats. `PlaybackControl.updateSlots()` cancels every node of the scheduled Voice (oscillator, gain, filter and 木 pre-scheduled noise transient) for beats ≥ current, re-schedules with new elements. Already-played beats unchanged. | Live edit, real-time update |
 | **Key** | The root note of the pentatonic scale. Selectable from 12 chromatic notes via dropdown. Pentatonic intervals (root→M2→M3→P5→M6) are preserved regardless of key. | Root, tonic, fundamental |
 | **Octave** | Transposition offset applied to all element frequencies. Range 3 to 8. Each step doubles/halves all frequencies. | Transposition, register |
 | **Frequency computation** | `rootFreq = 261.63 × 2^(semitoneFromC/12 + (octave - 4))`, then `frequency = rootFreq × 2^(interval/12)`, where `semitoneFromC` is the key's chromatic index and `interval` is the pentatonic offset from `ELEMENT_INTERVALS`. | |
-| **Queued slots** | Slots that crossed the head during winding, stored in crossing order; determines which notes play and in what sequence | Triggered slots, crossing set |
-| **Play order** | Encounter order: queued slots play in the exact order they crossed the head during winding | Melody order, sequence |
+| **Head crossing** | A Slot passing the fixed Head in either direction. Forward crossing appends it to the queue; reverse crossing removes it. Both emit the same crossing tick. Aliases: trigger, queue event. | Trigger, queue event |
+| **Queued slots** | Slots currently in the play sequence, stored in crossing order. A forward Head crossing appends; a reverse crossing removes the last-added Slot first (LIFO), so the queue is always a contiguous arc. Determines which notes play and in what sequence. | Triggered slots, crossing set |
+| **Play order** | Encounter order: queued slots play in the exact order they were added. A Slot removed by a reverse crossing and later re-crossed is appended at the tail. | Melody order, sequence |
 | **Beat grid** | The 10-beat timing framework: one beat per slot regardless of fill. Empty slots are rests — no note, but the beat position is preserved. The beat callback reports the queue index on every beat, including rests. | Timing grid, pulse |
 | **Tack sound** | A synthesized 30ms noise burst + 800Hz sine blip played when rotation crosses ±360° during winding. Derived from rotation value, not a mode transition. | Click, stop sound, mechanical catch |
 | **Early release** | Releasing before reaching tack; plays only the slots that already crossed the head with a proportionally shorter spring-back | Partial wind, short phrase |
@@ -102,7 +103,7 @@ The **derived feedback event stream** (`deriveFeedbackEvents`) is the single aut
 - A **Wheel** contains exactly 10 **Slots** (indices 0–9). They are placed clockwise along a 300° arc starting at 210° (7 o'clock), leaving a 60° reading gap at the **Head** (6 o'clock / 180°).
 - A **Slot** holds zero or one **Stone** (null = empty/rest, ElementType = filled)
 - The **Head** is fixed at 6 o'clock (180°); the **Wheel** rotates behind it
-- **WINDING** queues **Slots** into `queuedSlotIndices` as they cross the **Head**
+- **WINDING** appends **Slots** to `queuedSlotIndices` on forward **Head crossings** and removes them on reverse crossings; undo is LIFO, so the queue stays a contiguous arc and only the tail can leave
 - **SPRING_BACK** plays the **queued slots** in **play order** determined by wind direction
 - **BPM** controls the spring-back CSS transition duration and the interval between scheduled audio notes. Default is 180.
 - **Key** and **octave** control element frequencies via `getElementFrequencies()` (in `frequencies.ts`). Pentatonic intervals are preserved across all keys.
@@ -142,3 +143,11 @@ The **derived feedback event stream** (`deriveFeedbackEvents`) is the single aut
 > **Dev:** "What about octave changes?"
 >
 > **Domain expert:** "The same — `state.octave` is also an effect dependency, so playback restarts from beat 1. Each step doubles or halves all frequencies. Octave 6 plays everything one octave higher than octave 5."
+
+> **Dev:** "I wound CW and queued `[9,8,7]`, then turned back one slot. What is queued now?"
+>
+> **Domain expert:** "`[9,8]`. Slot 7 crossed back over the Head and left the queue. Only the tail can leave — reversing further gives `[9]`, then `[]`. You cannot drop 8 while keeping 9 and 7, because the queue is a contiguous arc, not a set."
+
+> **Dev:** "What if I wind forward again after undoing slot 8?"
+>
+> **Domain expert:** "Slot 8 crosses the Head again and is appended at the tail, so `[9]` becomes `[9,8]`. Re-crossing preserves encounter order; it does not restore the old position in the queue."

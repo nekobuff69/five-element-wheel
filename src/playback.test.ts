@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { startPlayback, type PlaybackControl } from './playback';
+import { playCrossingTick, playTackSound } from './audio';
 import type { ElementType } from './types';
 
 // ---------------------------------------------------------------------------
@@ -27,10 +28,20 @@ interface MockGain {
   disconnect: ReturnType<typeof vi.fn>;
 }
 
+interface MockNoiseSource {
+  buffer: unknown;
+  connect: ReturnType<typeof vi.fn>;
+  start: ReturnType<typeof vi.fn>;
+  stop: ReturnType<typeof vi.fn>;
+  disconnect: ReturnType<typeof vi.fn>;
+  onended: (() => void) | null;
+}
+
 let mockCurrentTime = 0;
 let oscillatorIdCounter = 0;
 const createdOscillators: MockOscillator[] = [];
 const createdGains: MockGain[] = [];
+const createdNoiseSources: MockNoiseSource[] = [];
 
 function createMockCtx() {
   return {
@@ -43,12 +54,18 @@ function createMockCtx() {
     createBuffer: vi.fn(() => ({
       getChannelData: vi.fn(() => new Float32Array(1323)),
     })),
-    createBufferSource: vi.fn(() => ({
-      buffer: null,
-      connect: vi.fn().mockReturnThis(),
-      start: vi.fn(),
-      stop: vi.fn(),
-    })),
+    createBufferSource: vi.fn((): MockNoiseSource => {
+      const src: MockNoiseSource = {
+        buffer: null,
+        connect: vi.fn().mockReturnThis(),
+        start: vi.fn(),
+        stop: vi.fn(),
+        disconnect: vi.fn(),
+        onended: null,
+      };
+      createdNoiseSources.push(src);
+      return src;
+    }),
     createOscillator: vi.fn((): MockOscillator => {
       const id = ++oscillatorIdCounter;
       const osc: MockOscillator = {
@@ -105,6 +122,7 @@ describe('startPlayback updateSlots', () => {
     oscillatorIdCounter = 0;
     createdOscillators.length = 0;
     createdGains.length = 0;
+    createdNoiseSources.length = 0;
     (globalThis as any).AudioContext = vi.fn(() => mockCtx);
   });
 
@@ -258,5 +276,88 @@ describe('startPlayback updateSlots', () => {
 
     // 4 oscillators stopped (beats 1,3,5,7 at position 1), 0 new = 8 total
     expect(createdOscillators.length).toBe(8);
+  });
+
+  // Regression: 木 carries a 10ms noise "knock" on top of its oscillator.
+  // Those bursts are pre-scheduled 4 iterations ahead, so removing the Stone
+  // must cancel them too — otherwise the knock keeps sounding on empty Slots.
+  it('stops the wood noise transient when its stone is removed mid-loop', () => {
+    const control = startFresh(['wood', null, null, null, null], [0, 1]);
+    const bursts = [...createdNoiseSources];
+    expect(bursts.length).toBeGreaterThan(0);
+
+    const clearedSlots: (ElementType | null)[] = Array(10).fill(null);
+    control.updateSlots(clearedSlots, 0);
+
+    for (const src of bursts) {
+      // stop() with no argument = immediate cancellation of a future burst
+      expect(src.stop.mock.calls.some((args) => args.length === 0)).toBe(true);
+    }
+  });
+
+  it('stops the wood noise transient when playback is cancelled', () => {
+    const control = startFresh(['wood', null, null, null, null], [0, 1]);
+    const bursts = [...createdNoiseSources];
+    expect(bursts.length).toBeGreaterThan(0);
+
+    control.cancel();
+
+    for (const src of bursts) {
+      expect(src.stop.mock.calls.some((args) => args.length === 0)).toBe(true);
+    }
+  });
+
+  it('cancels the wood knock when the stone is replaced by another element', () => {
+    const control = startFresh(['wood', null, null, null, null], [0, 1]);
+    const bursts = [...createdNoiseSources];
+    expect(bursts.length).toBeGreaterThan(0);
+
+    const replaced: (ElementType | null)[] = Array(10).fill(null);
+    replaced[0] = 'earth';
+    control.updateSlots(replaced, 0);
+
+    for (const src of bursts) {
+      expect(src.stop.mock.calls.some((args) => args.length === 0)).toBe(true);
+    }
+    // earth has no noise transient, so the replacement must not add a burst
+    expect(createdNoiseSources.length).toBe(bursts.length);
+  });
+});
+
+// One-shots are also AudioScheduledSourceNodes; their gain / filter nodes must
+// be released when the burst ends, or every gesture leaves nodes on the master.
+describe('audio one-shot node cleanup', () => {
+  beforeEach(() => {
+    mockCurrentTime = 0;
+    createdOscillators.length = 0;
+    createdGains.length = 0;
+    createdNoiseSources.length = 0;
+    (globalThis as any).AudioContext = vi.fn(() => createMockCtx());
+  });
+
+  afterEach(() => {
+    delete (globalThis as any).AudioContext;
+  });
+
+  it('releases the crossing tick burst and its gain on end', () => {
+    playCrossingTick(true);
+    const src = createdNoiseSources[createdNoiseSources.length - 1];
+    const gain = createdGains[createdGains.length - 1];
+    expect(src?.onended).toBeTypeOf('function');
+    src!.onended!();
+    expect(src!.disconnect).toHaveBeenCalled();
+    expect(gain!.disconnect).toHaveBeenCalled();
+  });
+
+  it('releases the tack noise burst and the blip oscillator on end', () => {
+    playTackSound();
+    const src = createdNoiseSources[createdNoiseSources.length - 1];
+    const osc = createdOscillators[createdOscillators.length - 1];
+    expect(src?.onended).toBeTypeOf('function');
+    expect(osc?.onended).toBeTypeOf('function');
+    src!.onended!();
+    osc!.onended!();
+    expect(src!.disconnect).toHaveBeenCalled();
+    expect(osc!.disconnect).toHaveBeenCalled();
   });
 });

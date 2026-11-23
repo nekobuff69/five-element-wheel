@@ -193,9 +193,6 @@ function Wheel({ state, dispatch, snapTargetSlot }: WheelProps) {
                       snapTargetSlot === i || slotDragSnapTarget === i
                     }
                     isDraggedAway={draggingFromSlotIndex === i}
-                    isApproaching={
-                      state.mode === 'winding' && state.currentSlotAtHead === i
-                    }
                   />
                 </div>
               );

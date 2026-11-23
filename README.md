@@ -52,9 +52,8 @@ Drag the wheel clockwise or counter-clockwise. As each slot crosses the fixed **
 | What you see | What it means |
 |--------------|---------------|
 | Thin gold ring on a slot | Slot is queued, will play |
-| A short hairline gold bar on the approaching Slot | The next Slot to cross the Head — a distinct cue from the queued ring and the snap-target dashed ring |
 
-Drag further to queue more slots. A full rotation (360°) queues all 10. A **tack sound** (noise burst + sine blip) confirms you've reached the limit. The wheel is capped at ±360°. A small 順 / 逆 label shows the visual read order, which is the opposite of the finger's wind direction (see `CONTEXT.md`).
+Drag further to queue more slots. Turn back the other way and the last queued slot leaves the sequence as it crosses the Head again — undo is one slot at a time, from the tail only. A full rotation (360°) queues all 10. A **tack sound** (noise burst + sine blip) confirms you've reached the limit. The wheel is capped at ±360°. A small 順 / 逆 label shows the visual read order, which is the opposite of the finger's wind direction (see `CONTEXT.md`).
 
 Each Slot crossing the Head also emits a light **crossing tick** — a filled Slot sounds brighter than an empty one, and fast winds are throttled so a quick drag does not become a burst of noise. Reaching the limit fires one deliberately heavier **tack** whose sound, compass-arc flash and haptic all come from a single event.
 
@@ -116,7 +115,7 @@ Feedback is derived from state differences (see `CONTEXT.md` and ADR-0012) and d
 | Rotation | CSS `transform: rotate()` with inline transition override for spring-back (ADR-0002) |
 | Layout | Runtime viewport fitting of the fixed 360px Wheel coordinate system (ADR-0011) |
 | PWA | `vite-plugin-pwa` with workbox `generateSW`, offline precache |
-| Testing | Vitest 2 + jsdom, 146 tests across 7 files |
+| Testing | Vitest 2 + jsdom, 157 tests across 7 files |
 
 ### Architecture (flat `src/`)
 
@@ -133,7 +132,7 @@ src/
   feedbackEvents.test.ts       — 26 tests for the single derived-event seam
   useFeedback.ts               — consumer: sound, haptics, tack flash, view tokens
   playback.ts                  — rAF-scheduled engine; re-exports getAudioContext / playTackSound, imports createVoice
-  playback.test.ts             — 6 updateSlots tests
+  playback.test.ts             — 11 playback lifecycle / node-cleanup tests
   detection.test.ts            — 10 slot-crossing detection tests
   direction-bias.test.ts       — 3 wind-direction tests
   visual-feedback.test.ts      — 4 visual-state tests
@@ -158,7 +157,7 @@ src/
 
 The state machine has 3 modes: `ready` → `winding` → `springBack`. Tack is derived from rotation (≥ 360°), not stored as a mode. All state transitions go through a pure reducer: deterministic, testable, no side effects. Feedback events are derived from state differences by `deriveFeedbackEvents()` and consumed by `useFeedback()`; the reducer is never an event source (ADR-0012).
 
-Audio timing comes from `AudioContext.currentTime`, synced to the visual frame loop via `requestAnimationFrame`. During loop playback, `PlaybackControl.updateSlots()` cancels future oscillators and re-schedules with new elements. Already-played beats are left alone.
+Audio timing comes from `AudioContext.currentTime`, synced to the visual frame loop via `requestAnimationFrame`. During loop playback, `PlaybackControl.updateSlots()` cancels every node of a future Voice (including 木 pre-scheduled noise transient) and re-schedules with new elements. Already-played beats are left alone.
 
 The beat callback reports the queue index on every beat, including rests, so an empty Slot can show that it is being read.
 
@@ -190,7 +189,7 @@ Opens at `http://localhost:5173/` (or next available port).
 | `bun run dev` | Start dev server with hot reload |
 | `bun run build` | Type-check and build to `dist/` |
 | `bun run preview` | Preview production build locally |
-| `bun run test` | Run full test suite (146 tests) |
+| `bun run test` | Run full test suite (157 tests) |
 | `bunx tsc --noEmit` | Type check without emitting |
 
 ### Project Dependencies
@@ -226,7 +225,7 @@ Output goes to `dist/`. The build produces a fully offline-capable PWA with serv
 
 ### Testing Philosophy
 
-The suite has 146 tests in seven files: reducer purity and action guards (`wheelReducer.test.ts`, 84), the derived feedback-event seam (`feedbackEvents.test.ts`, 26), playback `updateSlots` (`playback.test.ts`, 6), slot-crossing detection (`detection.test.ts`, 10), wind-direction bias (`direction-bias.test.ts`, 3), visual feedback states (`visual-feedback.test.ts`, 4), and the pure phrase-trace computation (`phraseTrace.test.ts`, 13). `deriveFeedbackEvents` is the single automated seam for the audiovisual-feedback feature; CSS, SVG rendering, timbre and haptics are verified visually and by ear, not asserted in tests, per project convention.
+The suite has 157 tests in seven files: reducer purity and action guards (`wheelReducer.test.ts`, 88), the derived feedback-event seam (`feedbackEvents.test.ts`, 28), playback `updateSlots` (`playback.test.ts`, 11), slot-crossing detection (`detection.test.ts`, 10), wind-direction bias (`direction-bias.test.ts`, 3), Head candidate selection (`visual-feedback.test.ts`, 4), and the pure phrase-trace computation (`phraseTrace.test.ts`, 13). `deriveFeedbackEvents` is the single automated seam for the audiovisual-feedback feature; CSS, SVG rendering, timbre and haptics are verified visually and by ear, not asserted in tests, per project convention.
 
 ```bash
 bun run test

@@ -14,7 +14,7 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/do
 
 - **`CONTEXT.md`** — ubiquitous language glossary: instrument anatomy (wheel, slot, head, stone, palette, ghost stone, snap target), elements and notes (Earth/root, Metal/M2, Wood/M3, Fire/P5, Water/M6), wheel state machine (READY→WINDING→SPRING_BACK), visual feedback (phrase trace, seal press, guide dialog), direction labels (順/逆), performance concepts (spring-back, loop, loop iteration, hot reload, key, octave, frequency computation, queued slots, play order, beat grid, tack sound, early release, stone drag, snap), audiovisual feedback (crossing tick, element voice, empty seal, wash / re-ink, wet ink / hot-reload pending, derived event stream).
 - **`docs/adr/`** — architecture decision records:
-  - `0001-use-reducer-state-machine.md` — useReducer with pure reducer (historical: recorded 111 tests; current suite is 146)
+  - `0001-use-reducer-state-machine.md` — useReducer with pure reducer (historical: recorded 111 tests; current suite is 157)
   - `0002-css-transform-rotation.md` — CSS transforms for winding + spring-back
   - `0003-tonejs-transport-audio.md` — tone.js PluckSynth + Transport scheduling (superseded by 0006)
   - `0004-angular-pointer-drag.md` — pointer events with angular delta
@@ -37,7 +37,7 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/do
 - **Rotation**: CSS `transform: rotate()` with inline transition override for spring-back
 - **Layout**: `100dvh` no-scroll main view; `useFitWheel` scales the fixed 360px Wheel frame into remaining height (ADR-0011)
 - **PWA**: `vite-plugin-pwa` with workbox `generateSW`, offline precache, iOS meta tags
-- **Testing**: Vitest 2 + jsdom, 146 tests across 7 files (`wheelReducer.test.ts` 84, `feedbackEvents.test.ts` 26, `playback.test.ts` 6, `phraseTrace.test.ts` 13, `detection.test.ts` 10, `direction-bias.test.ts` 3, `visual-feedback.test.ts` 4)
+- **Testing**: Vitest 2 + jsdom, 157 tests across 7 files (`wheelReducer.test.ts` 88, `feedbackEvents.test.ts` 28, `playback.test.ts` 11, `phraseTrace.test.ts` 13, `detection.test.ts` 10, `direction-bias.test.ts` 3, `visual-feedback.test.ts` 4)
 - **Package manager**: bun 1.3+ (`bun.lock`); npm/node can run the same `package.json` scripts
 - **Deployment**: Cloudflare Pages (Git integration, classic Pages project) — push to `main` builds with `npm install -g bun && bun install --frozen-lockfile && bun run build`, output `dist`, live at https://five-element-wheel.pages.dev/; other branches get preview deployments. Vite `base` must stay `/` (serves at domain root). GitHub Pages workflow removed in the cutover.
 
@@ -56,7 +56,7 @@ src/
   feedbackEvents.test.ts       — 26 tests for the single derived-event seam
   useFeedback.ts               — consumer: sound, haptics, tack flash, view tokens
   playback.ts                  — rAF-scheduled engine with hot reload; re-exports getAudioContext / playTackSound, imports createVoice
-  playback.test.ts             — 6 updateSlots tests
+  playback.test.ts             — 11 playback lifecycle / node-cleanup tests
   detection.test.ts            — 10 slot-crossing detection tests
   direction-bias.test.ts       — 3 wind-direction tests
   visual-feedback.test.ts      — 4 visual-state tests
@@ -81,6 +81,7 @@ src/
 
 - Slots are indexed 0–9 and placed clockwise along a 300° arc starting at 210° (7 o'clock), leaving a 60° reading gap at the Head (6 o'clock / 180°). `SLOT_START_ANGLE = 210`, `SLOT_ANGLE_SPAN = 300/9`.
 - Rotation capped at ±360°. CW wind → forward play order, CCW → reverse. The UI label 順/逆 shows the *visual read order*, which is the opposite of the finger's wind direction (CW is labelled 逆).
+- A Head crossing is reversible: forward appends the Slot to `queuedSlotIndices`, reverse removes it. Undo is LIFO (only the tail can leave), so the queue is always a contiguous arc. Re-crossing appends at the tail. Reverse crossings emit the same `slot-crossed` tick as forward ones.
 - Empty slots are rests — the 10-beat grid is always maintained. The beat callback reports the queue index on every beat, including rests.
 - Spring-back duration = `queuedSlotCount × (60 / BPM)` seconds.
 - CSS transition and audio scheduling fire in the same useEffect frame.
@@ -93,10 +94,10 @@ src/
 - `WIND` during `springBack` interrupts loop, resets queued indices for fresh wind cycle.
 - Stone drag uses document-level pointer events (not container-level) to avoid gesture blocking.
 - `WIND` resets rotation baseline to 0 when transitioning from `springBack` (CSS already animated to 0°).
-- Queued Slots get a thin gold ring (`slot--queued`); the Slot approaching the Head during winding gets a hairline gold bar (`slot--approaching`), visually distinct from the queued gold ring and the gold dashed snap-target ring (`slot--glow`). The playing Slot gets a cinnabar ring, including when it is empty; the Stone itself never changes colour.
+- Queued Slots get a thin gold ring (`slot--queued`), visually distinct from the gold dashed snap-target ring (`slot--glow`). The playing Slot gets a cinnabar ring, including when it is empty; the Stone itself never changes colour. A winding Slot approaching the Head has no special marking.
 - Playback handles looping internally: pre-schedules 4 iterations, extends dynamically, no gaps between loops.
 - Snap detection uses `findSnapTargetFromDOM()` (rendered `getBoundingClientRect()` positions), not the mathematical `findSnapTarget()`.
-- `PlaybackControl.updateSlots()` cancels future oscillators (beats ≥ currentBeat), re-schedules with new elements. Already-played beats unchanged.
+- `PlaybackControl.updateSlots()` cancels every node of a future Voice (oscillator, gain, filter and 木 pre-scheduled noise transient) for beats ≥ currentBeat, re-schedules with new elements. Already-played beats unchanged. `cancel()` uses the same `cancelVoice()` helper.
 - Ghost stone fades out over 200ms on pointer up via CSS transition + setTimeout cleanup. Drag ghosts render outside the scaled Wheel container so `position: fixed` tracks the finger.
 - Key is stored as a 12-tone chromatic name (`C`, `C#`, …, `B`) in `state.key`. Pentatonic intervals preserved across all keys.
 - Octave is stored as an integer 3..8 in `state.octave`. `rootFreq = 261.63 × 2^(semitoneFromC/12 + (octave - 4))`; element frequencies add `2^(interval/12)`.

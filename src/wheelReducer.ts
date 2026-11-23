@@ -22,14 +22,14 @@ function getSlotAtHead(rotation: number, direction: WindDirection | null | undef
   let bestDist = Infinity;
 
   for (let i = 0; i < 10; i++) {
-    // Skip slots that have already been queued (only for visual feedback)
+    // Skip slots that have already been queued (capture candidate only)
     if (excludeQueued && queuedSlots.includes(i)) continue;
 
     const angle = ((SLOT_START_ANGLE + i * SLOT_ANGLE_SPAN + rotation) % 360 + 360) % 360;
     let dist = Math.abs(angle - HEAD_ANGLE);
     if (dist > 180) dist = 360 - dist;
 
-    // Direction bias: break ties toward the approaching slot
+    // Direction bias: break ties toward the slot about to reach the Head
     if (direction === 'cw' && i === 9) dist -= 0.01;
     if (direction === 'ccw' && i === 0) dist -= 0.01;
 
@@ -53,30 +53,42 @@ function didCross(slot: number, prevRot: number, newRot: number, step: number): 
     : (prevAngle > HEAD_ANGLE && newAngle <= HEAD_ANGLE);
 }
 
+interface Crossing {
+  slot: number;
+  action: 'add' | 'remove';
+}
+
 function collectCrossings(
   prevSlot: number,
   newSlot: number,
   prevRotation: number,
   newRotation: number,
   step: number,
-  alreadyQueued: number[]
-): number[] {
-  const result: number[] = [];
+  queued: number[]
+): Crossing[] {
+  const crossings: Crossing[] = [];
 
-  const wouldCross = (slot: number) =>
-    didCross(slot, prevRotation, newRotation, step) &&
-    !alreadyQueued.includes(slot) &&
-    !result.includes(slot);
+  // A Head crossing is reversible: a slot already in the queue crossed back,
+  // so it leaves; a slot not yet queued enters. Both happen one slot at a time
+  // in traversal order, which keeps the queue a contiguous arc (LIFO undo).
+  const consider = (slot: number) => {
+    if (!didCross(slot, prevRotation, newRotation, step)) return;
+    if (crossings.some((c) => c.slot === slot)) return;
+    crossings.push({
+      slot,
+      action: queued.includes(slot) ? 'remove' : 'add',
+    });
+  };
 
   // Walk from prevSlot through newSlot inclusive, checking each for crossing
   let cursor = prevSlot;
-  if (wouldCross(cursor)) result.push(cursor);
+  consider(cursor);
   while (cursor !== newSlot) {
     cursor = (cursor + step + 10) % 10;
-    if (wouldCross(cursor)) result.push(cursor);
+    consider(cursor);
   }
 
-  return result;
+  return crossings;
 }
 
 
@@ -136,11 +148,18 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
 
       const newSlot = getSlotAtHead(newRotation, direction, effectiveQueued, false)!;
       const step = newRotation > baseRotation ? -1 : 1;
-      const newlyCrossed = collectCrossings(prevSlot, newSlot, baseRotation, newRotation, step, effectiveQueued);
-      const queued = [...effectiveQueued, ...newlyCrossed];
+      const crossings = collectCrossings(prevSlot, newSlot, baseRotation, newRotation, step, effectiveQueued);
+      let queued = [...effectiveQueued];
+      for (const { slot, action } of crossings) {
+        if (action === 'add') {
+          if (!queued.includes(slot)) queued.push(slot);
+        } else {
+          queued = queued.filter((s) => s !== slot);
+        }
+      }
 
-      // For visual feedback, exclude already-queued slots so glow moves to next approaching slot
-      const visualSlot = getSlotAtHead(newRotation, direction, queued, true);
+      // Exclude already-queued slots so the candidate is the next one the Head can capture
+      const candidateSlot = getSlotAtHead(newRotation, direction, queued, true);
 
       return {
         ...state,
@@ -148,24 +167,24 @@ export function wheelReducer(state: WheelState, action: WheelAction): WheelState
         rotation: newRotation,
         direction,
         queuedSlotIndices: queued,
-        currentSlotAtHead: visualSlot,
+        currentSlotAtHead: candidateSlot,
       };
     }
 
     case 'RELEASE': {
       if (state.mode !== 'winding') return state;
 
-      // Capture the approaching slot if it's close to the head
+      // Capture the candidate if it is close enough to the Head
       let finalQueued = state.queuedSlotIndices;
-      const visualSlot = state.currentSlotAtHead;
-      if (visualSlot !== null && !state.queuedSlotIndices.includes(visualSlot)) {
-        const slotAngle = ((SLOT_START_ANGLE + visualSlot * SLOT_ANGLE_SPAN + state.rotation) % 360 + 360) % 360;
+      const candidateSlot = state.currentSlotAtHead;
+      if (candidateSlot !== null && !state.queuedSlotIndices.includes(candidateSlot)) {
+        const slotAngle = ((SLOT_START_ANGLE + candidateSlot * SLOT_ANGLE_SPAN + state.rotation) % 360 + 360) % 360;
         let dist = Math.abs(slotAngle - HEAD_ANGLE);
         if (dist > 180) dist = 360 - dist;
 
         // If within 10° of head, capture it
         if (dist <= 10) {
-          finalQueued = [...state.queuedSlotIndices, visualSlot];
+          finalQueued = [...state.queuedSlotIndices, candidateSlot];
         }
       }
 

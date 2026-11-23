@@ -1,6 +1,6 @@
 import { type ElementType, type WindDirection } from './types';
 import { getElementFrequencies } from './frequencies';
-import { getAudioContext, playTackSound, createVoice } from './audio';
+import { getAudioContext, playTackSound, createVoice, type Voice } from './audio';
 
 // The single AudioContext, the tack sound, and the element voice factory all
 // live in audio.ts (ADR-0006). Re-export them so existing imports of
@@ -32,11 +32,9 @@ interface PlaybackState {
   loop: boolean;
   totalScheduledBeats: number;
 }
-interface OscillatorInfo {
-  osc: OscillatorNode;
-  gain: GainNode;
+/** Every node a Voice owns, so cancellation never leaves a pre-scheduled sound. */
+interface OscillatorInfo extends Voice {
   slotIndex: number;
-  filter?: BiquadFilterNode | null;
 }
 
 export interface PlaybackControl {
@@ -156,6 +154,27 @@ export function startPlayback(
   pb.rafId = requestAnimationFrame(tick);
 
 
+  /**
+   * Stop every node a Voice owns. 木's knock is an AudioBufferSourceNode
+   * pre-scheduled up to 4 iterations ahead, so leaving it out lets the knock
+   * sound on a future beat even after its Stone has been removed. stop() with
+   * no argument cancels a burst that has not fired yet.
+   */
+  function cancelVoice(info: OscillatorInfo | null): void {
+    if (!info) return;
+    info.osc.onended = null;
+    try { info.osc.stop(); } catch {}
+    try { info.osc.disconnect(); } catch {}
+    try { info.gain.disconnect(); } catch {}
+    if (info.filter) { try { info.filter.disconnect(); } catch {} }
+    if (info.noise) {
+      info.noise.source.onended = null;
+      try { info.noise.source.stop(); } catch {}
+      try { info.noise.source.disconnect(); } catch {}
+      try { info.noise.gain.disconnect(); } catch {}
+    }
+  }
+
   function updateSlots(newSlots: (ElementType | null)[], currentBeat: number): void {
     if (pb.cancelled || pb.completed) return;
 
@@ -168,15 +187,8 @@ export function startPlayback(
 
       if (oldElement === newElement) continue;
 
-      // Cancel existing oscillator for this beat
-      const existing = pb.oscillators[absBeat];
-      if (existing) {
-        existing.osc.onended = null;
-        try { existing.osc.stop(); } catch {}
-        try { existing.osc.disconnect(); } catch {}
-        try { existing.gain.disconnect(); } catch {}
-        if (existing.filter) { try { existing.filter.disconnect(); } catch {} }
-      }
+      // Cancel every node of the existing voice, including 木's knock
+      cancelVoice(pb.oscillators[absBeat]);
 
       if (!newElement) {
         pb.oscillators[absBeat] = null;
@@ -210,13 +222,7 @@ export function startPlayback(
         pb.rafId = null;
       }
       for (const info of pb.oscillators) {
-        if (info) {
-          info.osc.onended = null;
-          try { info.osc.stop(); } catch {}
-          try { info.osc.disconnect(); } catch {}
-          try { info.gain.disconnect(); } catch {}
-          if (info.filter) { try { info.filter.disconnect(); } catch {} }
-        }
+        cancelVoice(info);
       }
     },
     updateSlots,

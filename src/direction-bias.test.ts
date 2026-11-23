@@ -2,13 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { wheelReducer, initialWheelState } from './wheelReducer';
 
 describe('direction bias bug', () => {
-  it('should bias the approaching slot, not hardcoded slot 9', () => {
+  it('should bias the Head candidate, not hardcoded slot 9', () => {
     let state = initialWheelState;
 
     // Rotate CW by 33.33° so slot 9 crosses and is queued
     state = wheelReducer(state, { type: 'WIND', delta: 33.33 });
-    // Slot 9 at 183.33° (past head, queued), slot 8 at 150° (approaching head)
-    // Glow moves to slot 8 (next approaching, not queued)
+    // Slot 9 at 183.33° (past head, queued), slot 8 at 150°
+    // The next capture candidate is slot 8
     expect(state.currentSlotAtHead).toBe(8);
 
     // Now drag a tiny bit more CW
@@ -18,7 +18,7 @@ describe('direction bias bug', () => {
     expect(state.currentSlotAtHead).toBe(8);
   });
 
-  it('direction bias should apply to approaching slot after rotation', () => {
+  it('direction bias should apply to the Head candidate after rotation', () => {
     let state = initialWheelState;
     
     // Rotate to a position where two slots are equidistant from head
@@ -30,14 +30,14 @@ describe('direction bias bug', () => {
     // Slot 9 base = 150°, slot 0 base = 210°
     // At rotation=0: slot 9 at 150° (30° from head), slot 0 at 210° (30° from head) ← equidistant!
     
-    // With CW direction, bias should favor slot 9 (approaching from right)
+    // With CW direction, bias should favor slot 9 (reaching the Head first)
     state = wheelReducer(state, { type: 'WIND', delta: 0.001 });
     expect(state.currentSlotAtHead).toBe(9); // Bias should favor slot 9
     
     // Reset
     state = initialWheelState;
     
-    // With CCW direction, bias should favor slot 0 (approaching from left)
+    // With CCW direction, bias should favor slot 0 (reaching the Head first)
     state = wheelReducer(state, { type: 'WIND', delta: -0.001 });
     expect(state.currentSlotAtHead).toBe(0); // Bias should favor slot 0
   });
@@ -45,7 +45,7 @@ describe('direction bias bug', () => {
   it('BUG: direction bias is hardcoded, not rotation-aware', () => {
     let state = initialWheelState;
     
-    // Rotate CW by 33.33° so slot 8 is now at 150° (approaching from right)
+    // Rotate CW by 33.33° so slot 8 is now at 150° (reaching the Head next)
     state = wheelReducer(state, { type: 'WIND', delta: 33.33 });
     // Slot 8 at 150°, slot 9 at 183.33°
     
@@ -76,7 +76,7 @@ describe('direction bias bug', () => {
     // No slot is equidistant with slot 8 at this rotation.
     
     // The bug is that the bias is hardcoded to slots 9 and 0, but it should
-    // bias the slot that's currently approaching from that direction.
+    // bias the slot that's currently reaching the Head from that direction.
     // In practice, this rarely matters because slots are rarely exactly equidistant.
     
     // But conceptually, it's wrong. Let me document it as a known issue.

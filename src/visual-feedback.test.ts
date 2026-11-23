@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { wheelReducer, initialWheelState } from './wheelReducer';
 
-// Helper to access the internal getSlotAtHead function
-// We'll test it indirectly through the reducer's currentSlotAtHead field
+// The internal getSlotAtHead function is exercised indirectly through the
+// reducer's currentSlotAtHead field, which drives the Head readout and the
+// release-time capture check.
 
-describe('getSlotAtHead visual feedback', () => {
+describe('getSlotAtHead candidate selection', () => {
   it('identifies correct slot at head during CW wind', () => {
     let state = initialWheelState;
 
@@ -16,7 +17,7 @@ describe('getSlotAtHead visual feedback', () => {
     // Continue to slot 9 at head (crosses 180°)
     state = wheelReducer(state, { type: 'WIND', delta: 29 });
     // Slot 9 now at 180° (at head), gets queued
-    // Glow moves to next approaching slot (8)
+    // The next capture candidate is slot 8
     expect(state.currentSlotAtHead).toBe(8);
 
     // Continue past slot 9
@@ -32,7 +33,7 @@ describe('getSlotAtHead visual feedback', () => {
     // Rotate to slot 8 position (33.33°)
     state = wheelReducer(state, { type: 'WIND', delta: 33.33 });
     // Slot 9 at 183.33° (crossed, queued), slot 8 at 150°
-    // Slot 9 is queued, so glow moves to slot 8 (next approaching)
+    // Slot 9 is queued, so slot 8 becomes the next capture candidate
     expect(state.currentSlotAtHead).toBe(8);
 
     // Continue a bit more
@@ -53,7 +54,7 @@ describe('getSlotAtHead visual feedback', () => {
     // Continue to slot 0 at head (crosses 180°)
     state = wheelReducer(state, { type: 'WIND', delta: -29 });
     // Slot 0 now at 180° (at head), gets queued
-    // Glow moves to next approaching slot (1)
+    // The next capture candidate is slot 1
     expect(state.currentSlotAtHead).toBe(1);
 
     // Continue past slot 0
@@ -66,7 +67,7 @@ describe('getSlotAtHead visual feedback', () => {
   it('transitions to next slot when current slot moves past head', () => {
     let state = initialWheelState;
     
-    // Rotate CW until slot 9 is past head and slot 8 is approaching
+    // Rotate CW until slot 9 is past the Head and slot 8 is the candidate
     state = wheelReducer(state, { type: 'WIND', delta: 50 });
     // Slot 9 at 200°, slot 8 at 166.67°
     // Slot 9 is 20° from head, slot 8 is 13.33° from head

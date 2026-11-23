@@ -98,10 +98,12 @@ const TIMBRES: Record<ElementType, Timbre> = {
 
 const VOICE_PEAK = 0.38;
 
-interface Voice {
+export interface Voice {
   osc: OscillatorNode;
   gain: GainNode;
   filter: BiquadFilterNode | null;
+  /** 木's 10ms knock; owned by the Voice so playback can cancel a future burst. */
+  noise: { source: AudioBufferSourceNode; gain: GainNode } | null;
 }
 
 /**
@@ -188,7 +190,9 @@ export function createVoice(
   // is preserved. makeNoise() feature-detects createBuffer/createBufferSource
   // and returns null when absent; everything else is fully guarded so a
   // partial Web Audio implementation or the minimal test mock degrades to the
-  // plain oscillator voice.
+  // plain oscillator voice. The burst is returned as part of the Voice so
+  // playback.ts can cancel it when its Stone is removed mid-loop.
+  let noise: Voice['noise'] = null;
   if (timbre.noiseTransient) {
     try {
       const src = makeNoise(ctx, 0.01);
@@ -201,8 +205,16 @@ export function createVoice(
         transientGain.connect(out);
         src.start(startTime);
         src.stop(startTime + 0.01);
+        noise = { source: src, gain: transientGain };
+        // Release the burst's nodes when it finishes naturally; cancellation
+        // clears this handler and disconnects them explicitly instead.
+        src.onended = () => {
+          try { src.disconnect(); } catch { /* already disconnected */ }
+          try { transientGain.disconnect(); } catch { /* already disconnected */ }
+        };
       }
     } catch {
+      noise = null;
       /* partial Web Audio / minimal mock — keep the plain voice */
     }
   }
@@ -215,7 +227,7 @@ export function createVoice(
     }
   };
 
-  return { osc, gain, filter };
+  return { osc, gain, filter, noise };
 }
 
 /** Unlock/resume audio inside the first pointer-down gesture (mobile Chrome). */
@@ -254,6 +266,23 @@ function makeNoise(ctx: AudioContext, duration: number): AudioBufferSourceNode |
   return src;
 }
 
+/**
+ * Release a one-shot's nodes when its source finishes. Without this the gain
+ * (and any filter) stays wired to the master output; every gesture would add
+ * another orphaned node. Notes do the same via their own onended handlers.
+ */
+function releaseOneShot(
+  source: AudioScheduledSourceNode,
+  ...nodes: (AudioNode | null)[]
+): void {
+  source.onended = () => {
+    try { source.disconnect(); } catch { /* already disconnected */ }
+    for (const node of nodes) {
+      if (node) { try { node.disconnect(); } catch { /* already disconnected */ } }
+    }
+  };
+}
+
 function envelope(ctx: AudioContext, peak: number, duration: number): GainNode | null {
   if (typeof ctx.createGain !== 'function') return null;
   const gain = ctx.createGain();
@@ -274,6 +303,7 @@ function blip(ctx: AudioContext, out: AudioNode, freq: number, peak: number, dur
   gain.connect(out);
   osc.start(ctx.currentTime);
   osc.stop(ctx.currentTime + duration);
+  releaseOneShot(osc, gain);
 }
 
 /** One light carving tick per crossed Slot. Filled is brighter than a rest. */
@@ -287,8 +317,9 @@ export function playCrossingTick(hasStone: boolean): void {
     const gain = envelope(ctx, hasStone ? 0.09 : 0.06, duration);
     if (!src || !gain) return;
 
+    let filter: BiquadFilterNode | null = null;
     if (typeof ctx.createBiquadFilter === 'function') {
-      const filter = ctx.createBiquadFilter();
+      filter = ctx.createBiquadFilter();
       filter.type = 'bandpass';
       filter.frequency.setValueAtTime(hasStone ? 1800 : 700, ctx.currentTime);
       src.connect(filter);
@@ -299,6 +330,7 @@ export function playCrossingTick(hasStone: boolean): void {
     gain.connect(out);
     src.start(ctx.currentTime);
     src.stop(ctx.currentTime + duration);
+    releaseOneShot(src, filter, gain);
   } catch {
     /* Web Audio unavailable / partial — degrade silently */
   }
@@ -318,6 +350,7 @@ export function playPlacementSound(kind: 'place' | 'remove'): void {
       gain.connect(out);
       src.start(ctx.currentTime);
       src.stop(ctx.currentTime + duration);
+      releaseOneShot(src, gain);
     }
     blip(ctx, out, 180, kind === 'place' ? 0.06 : 0.035, duration, kind === 'place' ? 'sine' : 'triangle');
   } catch {
@@ -344,6 +377,7 @@ export function playTackSound(): void {
       noiseGain.connect(out);
       src.start(now);
       src.stop(now + duration);
+      releaseOneShot(src, noiseGain);
     }
     blip(ctx, out, 800, 0.2, duration, 'sine');
   } catch {
