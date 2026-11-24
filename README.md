@@ -190,6 +190,7 @@ Opens at `http://localhost:5173/` (or next available port).
 | `bun run build` | Type-check and build to `dist/` |
 | `bun run preview` | Preview production build locally |
 | `bun run test` | Run full test suite (157 tests) |
+| `bun run icons` | Regenerate `favicon.svg` and every PNG icon from one geometry source |
 | `bunx tsc --noEmit` | Type check without emitting |
 
 ### Project Dependencies

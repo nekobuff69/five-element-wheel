@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="五行輪">
+  <title>五行輪 · Five-Element Wheel</title>
+  <!-- 五石: the five element stones on a lacquer ground, in 相剋 order 木→土→水→火→金. -->
+  <rect width="64" height="64" fill="#12100e" />
+  <circle cx="32" cy="49.8" r="7" fill="#6E8B84" />
+  <circle cx="15.07" cy="37.5" r="7" fill="#8A6A3C" />
+  <circle cx="21.54" cy="17.6" r="7" fill="#4A6470" />
+  <circle cx="42.46" cy="17.6" r="7" fill="#A8322A" />
+  <circle cx="48.93" cy="37.5" r="7" fill="#B08D57" />
+</svg>
