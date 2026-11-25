@@ -14,7 +14,7 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/do
 
 - **`CONTEXT.md`** — ubiquitous language glossary: instrument anatomy (wheel, slot, head, stone, palette, ghost stone, snap target), elements and notes (Earth/root, Metal/M2, Wood/M3, Fire/P5, Water/M6), wheel state machine (READY→WINDING→SPRING_BACK), visual feedback (phrase trace, seal press, guide dialog), direction labels (順/逆), performance concepts (spring-back, loop, loop iteration, hot reload, key, octave, frequency computation, queued slots, play order, beat grid, tack sound, early release, stone drag, snap), audiovisual feedback (crossing tick, element voice, empty seal, wash / re-ink, wet ink / hot-reload pending, derived event stream).
 - **`docs/adr/`** — architecture decision records:
-  - `0001-use-reducer-state-machine.md` — useReducer with pure reducer (historical: recorded 111 tests; current suite is 157)
+  - `0001-use-reducer-state-machine.md` — useReducer with pure reducer (historical: recorded 111 tests; current suite is 170)
   - `0002-css-transform-rotation.md` — CSS transforms for winding + spring-back
   - `0003-tonejs-transport-audio.md` — tone.js PluckSynth + Transport scheduling (superseded by 0006)
   - `0004-angular-pointer-drag.md` — pointer events with angular delta
@@ -37,7 +37,7 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/do
 - **Rotation**: CSS `transform: rotate()` with inline transition override for spring-back
 - **Layout**: `100dvh` no-scroll main view; `useFitWheel` scales the fixed 360px Wheel frame into remaining height (ADR-0011)
 - **PWA**: `vite-plugin-pwa` with workbox `generateSW`, offline precache, iOS meta tags
-- **Testing**: Vitest 2 + jsdom, 157 tests across 7 files (`wheelReducer.test.ts` 88, `feedbackEvents.test.ts` 28, `playback.test.ts` 11, `phraseTrace.test.ts` 13, `detection.test.ts` 10, `direction-bias.test.ts` 3, `visual-feedback.test.ts` 4)
+- **Testing**: Vitest 2 + jsdom, 170 tests across 9 files (`wheelReducer.test.ts` 88, `feedbackEvents.test.ts` 28, `playback.test.ts` 11, `phraseTrace.test.ts` 13, `detection.test.ts` 10, `direction-bias.test.ts` 3, `visual-feedback.test.ts` 4, `guideGate.test.ts` 8, `guideOnboarding.test.tsx` 5)
 - **Package manager**: bun 1.3+ (`bun.lock`); npm/node can run the same `package.json` scripts
 - **Deployment**: Cloudflare Pages (Git integration, classic Pages project) — push to `main` builds with `npm install -g bun && bun install --frozen-lockfile && bun run build`, output `dist`, live at https://five-element-wheel.pages.dev/; other branches get preview deployments. Vite `base` must stay `/` (serves at domain root). GitHub Pages workflow removed in the cutover.
 
@@ -45,15 +45,19 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/do
 
 ```
 src/
-  main.tsx, App.tsx            — entry + root component, 玩法 guide dialog, viewport ref
+  main.tsx, App.tsx            — entry + root component, guide mode state, viewport ref
+  guideGate.ts                 — first-run gate rules: session flag, ?guide=1 force, in-memory fallback
+  guideGate.test.ts            — 8 gate-rule tests
+  GuideCard.tsx                — 玩法 card: first-run gate (試一試, ↓ hint) or reference (×)
+  guideOnboarding.test.tsx     — 5 App-level onboarding tests
   vite-env.d.ts                — Vite type declarations
   types.ts                     — ElementType, WheelState, WheelAction, element data, KEY_NAMES
   frequencies.ts               — getElementFrequencies() pure music theory (key + octave → Hz)
   wheelReducer.ts              — pure reducer + initialWheelState + helpers
-  wheelReducer.test.ts         — 84 unit tests (state machine + actions + key/octave)
+  wheelReducer.test.ts         — 88 unit tests (state machine + actions + key/octave)
   audio.ts                     — single AudioContext + master gain, five element voices, one-shots, haptics
   feedbackEvents.ts            — deriveFeedbackEvents() pure state-diff to feedback events
-  feedbackEvents.test.ts       — 26 tests for the single derived-event seam
+  feedbackEvents.test.ts       — 28 tests for the single derived-event seam
   useFeedback.ts               — consumer: sound, haptics, tack flash, view tokens
   playback.ts                  — rAF-scheduled engine with hot reload; re-exports getAudioContext / playTackSound, imports createVoice
   playback.test.ts             — 11 playback lifecycle / node-cleanup tests
@@ -106,5 +110,5 @@ src/
 - Changing BPM, key, octave, or loop during spring-back cancels playback and restarts the phrase from beat 1 (those fields are effect dependencies). Only stone edits are hot-reloaded.
 - Phrase trace: `buildPhraseTrace()` maps the five element intervals to 宮商角徵羽, joins consecutive sounded beats, breaks the stroke at rests, and clears marks at a loop iteration boundary. Base grid elements never change opacity.
 - Main view is `100dvh` with `overflow: hidden`; `useFitWheel` measures the non-wheel chrome and scales `--wheel-scale` so nothing scrolls (ADR-0011).
-- The 玩法 guide dialog is a fixed overlay opened by the button under the title rule. There is no first-use hint. Guide copy is Traditional Chinese with unnumbered bullets.
+- The 玩法 guide dialog is a fixed overlay opened by the button under the title rule. On a browser session's first visit it opens by itself as a gate: no ×, no backdrop close, Esc swallowed; 試一試 is its only exit and marks the session seen (`sessionStorage`). `?guide=1` forces the gate without consuming that first run. Guide copy is Traditional Chinese with unnumbered bullets.
 - Stone removal: click a filled slot with matching selectedStone to remove, or drag stone off wheel to remove (useSlotDrag hook).

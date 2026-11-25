@@ -83,7 +83,7 @@ Below the Wheel, an ink chart draws the phrase you just wrote: ten beats on the 
 
 At each loop iteration the written line **washes / re-inks** once (~180ms) while the grid, degree names and beat readout stay perfectly still. A future beat edited mid-loop shows a **wet-ink** half-filled cinnabar mark, distinct from an ordinary unplayed beat and from the snap target's dashed ring; it clears once that beat sounds. When a BPM, key, octave or loop change restarts the phrase from beat 1, a short **重起 · …** inscription replaces the beat readout for about 1.2s, then returns to the beat readout on its own — no new row, no added height. A polite, visually hidden live region announces the beat position once per beat.
 
-A **玩法** button under the title rule opens a guide dialog with the rules of play. It does not take part in the main layout.
+A **玩法** button under the title rule opens a guide dialog with the rules of play. It does not take part in the main layout. On a browser session's first visit the same card opens by itself as a gate: the ×, the backdrop and Esc are all disabled, and **試一試** is its only exit — pressing it marks the session as having seen the rules. `?guide=1` forces the gate for demos without consuming that first run.
 
 #### 7. Controls
 
@@ -115,21 +115,25 @@ Feedback is derived from state differences (see `CONTEXT.md` and ADR-0012) and d
 | Rotation | CSS `transform: rotate()` with inline transition override for spring-back (ADR-0002) |
 | Layout | Runtime viewport fitting of the fixed 360px Wheel coordinate system (ADR-0011) |
 | PWA | `vite-plugin-pwa` with workbox `generateSW`, offline precache |
-| Testing | Vitest 2 + jsdom, 157 tests across 7 files |
+| Testing | Vitest 2 + jsdom, 170 tests across 9 files |
 
 ### Architecture (flat `src/`)
 
 ```
 src/
-  main.tsx, App.tsx            — entry + root component, guide dialog, viewport fitting
+  main.tsx, App.tsx            — entry + root component, guide mode state, viewport fitting
+  guideGate.ts                 — first-run gate rules: session flag, ?guide=1 force, in-memory fallback
+  guideGate.test.ts            — 8 gate-rule tests
+  GuideCard.tsx                — 玩法 card: first-run gate (試一試, ↓ hint) or reference (×)
+  guideOnboarding.test.tsx     — 5 App-level onboarding tests
   vite-env.d.ts                — Vite type declarations
   types.ts                     — ElementType, WheelState, WheelAction, element data, KEY_NAMES
   frequencies.ts               — getElementFrequencies() pure music theory
   wheelReducer.ts              — pure reducer + initialWheelState (handles all actions)
-  wheelReducer.test.ts         — 84 unit tests (state machine + actions + key/octave)
+  wheelReducer.test.ts         — 88 unit tests (state machine + actions + key/octave)
   audio.ts                     — single AudioContext + master gain, element voices, one-shots, haptics
   feedbackEvents.ts            — deriveFeedbackEvents() pure state-diff to feedback events
-  feedbackEvents.test.ts       — 26 tests for the single derived-event seam
+  feedbackEvents.test.ts       — 28 tests for the single derived-event seam
   useFeedback.ts               — consumer: sound, haptics, tack flash, view tokens
   playback.ts                  — rAF-scheduled engine; re-exports getAudioContext / playTackSound, imports createVoice
   playback.test.ts             — 11 playback lifecycle / node-cleanup tests
@@ -189,7 +193,7 @@ Opens at `http://localhost:5173/` (or next available port).
 | `bun run dev` | Start dev server with hot reload |
 | `bun run build` | Type-check and build to `dist/` |
 | `bun run preview` | Preview production build locally |
-| `bun run test` | Run full test suite (157 tests) |
+| `bun run test` | Run full test suite (170 tests) |
 | `bun run icons` | Regenerate `favicon.svg` and every PNG icon from one geometry source |
 | `bunx tsc --noEmit` | Type check without emitting |
 
@@ -226,7 +230,7 @@ Output goes to `dist/`. The build produces a fully offline-capable PWA with serv
 
 ### Testing Philosophy
 
-The suite has 157 tests in seven files: reducer purity and action guards (`wheelReducer.test.ts`, 88), the derived feedback-event seam (`feedbackEvents.test.ts`, 28), playback `updateSlots` (`playback.test.ts`, 11), slot-crossing detection (`detection.test.ts`, 10), wind-direction bias (`direction-bias.test.ts`, 3), Head candidate selection (`visual-feedback.test.ts`, 4), and the pure phrase-trace computation (`phraseTrace.test.ts`, 13). `deriveFeedbackEvents` is the single automated seam for the audiovisual-feedback feature; CSS, SVG rendering, timbre and haptics are verified visually and by ear, not asserted in tests, per project convention.
+The suite has 170 tests in nine files: reducer purity and action guards (`wheelReducer.test.ts`, 88), the derived feedback-event seam (`feedbackEvents.test.ts`, 28), playback `updateSlots` (`playback.test.ts`, 11), slot-crossing detection (`detection.test.ts`, 10), wind-direction bias (`direction-bias.test.ts`, 3), Head candidate selection (`visual-feedback.test.ts`, 4), the pure phrase-trace computation (`phraseTrace.test.ts`, 13), the first-run gate rules (`guideGate.test.ts`, 8), and the App-level onboarding flow — auto-open, blocked dismissals, session persistence, replay card, `?guide=1` (`guideOnboarding.test.tsx`, 5). `deriveFeedbackEvents` is the single automated seam for the audiovisual-feedback feature; CSS, SVG rendering, timbre and haptics are verified visually and by ear, not asserted in tests, per project convention.
 
 ```bash
 bun run test

@@ -30,7 +30,8 @@ The five elements map to the pentatonic scale (五音 / wǔ yīn). The **key** c
 |------|-----------|-----------------|
 | **Phrase trace** | The ink chart below the Wheel: ten beats on the horizontal axis, the five pentatonic degrees (宮商角徵羽) on the vertical. Sounded Stones leave cinnabar marks joined by a hairline gold stroke; a rest breaks the stroke. Only the marks are recomputed at a loop iteration boundary — the grid, degree names, and beat readout stay still. | Waveform, piano roll, sequencer |
 | **Seal press** | The short hard-attack animation at the Head on each beat; the only per-beat event. Stones stay still. | Note pop, particle effect |
-| **Guide dialog** | The 玩法 card opened by the button under the title rule; contains the rules of play. It is a fixed overlay, not part of the main layout. | Help modal, tooltip, first-use hint |
+| **Guide dialog** | The 玩法 card opened by the button under the title rule; contains the rules of play. It is a fixed overlay, not part of the main layout. | Help modal, tooltip, walkthrough |
+| **First-run gate** | The guide dialog's automatic first appearance in a browser session. It is deliberately not dismissible by scraping it away: only 試一試 lets the player through, and that press is what counts the session as having seen the rules. A forced opening (a demo link) shows the gate without counting as seen. | Tutorial popup, onboarding modal, welcome screen, first-use hint |
 
 ## Audiovisual feedback
 

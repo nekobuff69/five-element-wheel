@@ -743,17 +743,26 @@ body {
   justify-content: center;
   padding: 24px;
   background: rgba(18, 16, 14, 0.94);
+  animation: guide-overlay-in 160ms ease-out both;
 }
 .guide-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 360px;
   max-height: 80dvh;
-  overflow-y: auto;
+  overflow: hidden;
   border: 0.5px solid var(--ink-gold);
   background: var(--ink-bg);
   padding: 18px 20px 22px;
+  animation: guide-card-in 180ms ease-out both;
+}
+.guide-card:focus {
+  outline: none;
 }
 .guide-card__head {
+  flex: 0 0 auto;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -773,6 +782,13 @@ body {
   line-height: 1;
   cursor: pointer;
 }
+/* The rules scroll; the first-run card's head stays put above them. */
+.guide-card__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .guide-card__list {
   margin: 0;
   padding-left: 1.2em;
@@ -788,6 +804,64 @@ body {
 }
 .guide-card__list li::marker {
   color: var(--ink-gold);
+}
+/* First-run gate: the list is followed by the only exit, so the copy has to
+   be scrolled before 試一試 appears. */
+.guide-card__start {
+  display: block;
+  width: 100%;
+  margin: 16px 0 2px;
+  padding: 12px 0;
+  border: none;
+  background: var(--ink-cinnabar);
+  color: var(--ink-paper);
+  font-family: inherit;
+  font-size: 15px;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
+  cursor: pointer;
+}
+.guide-card__start:focus-visible {
+  outline: 1px solid var(--ink-gold);
+  outline-offset: 3px;
+}
+/* ↓ sits in the card's bottom padding, over the scrolled-out 試一試, until the
+   list reaches its end. */
+.guide-card__hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4px;
+  pointer-events: none;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--ink-gold);
+  animation: guide-hint-drift 1.6s ease-in-out infinite;
+}
+@keyframes guide-overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes guide-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+@keyframes guide-hint-drift {
+  50% {
+    transform: translateY(3px);
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .guide-overlay,
+  .guide-card,
+  .guide-card__hint {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
